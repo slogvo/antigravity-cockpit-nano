@@ -10,8 +10,8 @@ import { autoTriggerController } from '../auto_trigger/controller';
 import { announcementService } from '../announcement';
 
 export class MessageController {
-    // 跟踪已通知的模型以避免重复弹窗 (虽然主要逻辑在 TelemetryController，但 CheckAndNotify 可能被消息触发吗? 不, 主要是 handleMessage)
-    // 这里主要是处理前端发来的指令
+    // Track notified models to avoid duplicate popups (although main logic is in TelemetryController, CheckAndNotify might be triggered by message? No, mainly handleMessage)
+    // This primarily handles commands sent from the frontend
     private context: vscode.ExtensionContext;
 
     constructor(
@@ -25,7 +25,7 @@ export class MessageController {
     }
 
     private setupMessageHandling(): void {
-        // 设置 autoTriggerController 的消息处理器，使其能够推送状态更新到 webview
+        // Set message handler for autoTriggerController to enable pushing state updates to webview
         autoTriggerController.setMessageHandler((message) => {
             if (message.type === 'auto_trigger_state_update') {
                 this.hud.sendMessage({
@@ -89,7 +89,7 @@ export class MessageController {
                         logger.info('Dashboard initialized (no cache, performing full sync)');
                         this.reactor.syncTelemetry();
                     }
-                    // 发送公告状态
+                    // Send announcement state
                     {
                         const annState = await announcementService.getState();
                         this.hud.sendMessage({
@@ -117,14 +117,14 @@ export class MessageController {
                 case 'toggleGrouping': {
                     logger.info('User toggled grouping display');
                     const enabled = await configService.toggleGroupingEnabled();
-                    // 用户期望：切换到分组模式时，状态栏默认也显示分组
+                    // User expectation: when switching to grouping mode, status bar should also show grouping by default
                     if (enabled) {
                         const config = configService.getConfig();
                         if (!config.groupingShowInStatusBar) {
                             await configService.updateConfig('groupingShowInStatusBar', true);
                         }
 
-                        // 首次开启分组时（groupMappings 为空），自动执行分组
+                        // When enabling grouping for the first time (groupMappings is empty), auto-group
                         if (Object.keys(config.groupMappings).length === 0) {
                             const latestSnapshot = this.reactor.getLatestSnapshot();
                             if (latestSnapshot && latestSnapshot.models.length > 0) {
@@ -134,7 +134,7 @@ export class MessageController {
                             }
                         }
                     }
-                    // 使用缓存数据重新渲染
+                    // Re-render using cached data
                     this.reactor.reprocess();
                     break;
                 }
@@ -143,7 +143,7 @@ export class MessageController {
                     if (message.modelIds && message.groupName) {
                         logger.info(`User renamed group to: ${message.groupName}`);
                         await configService.updateGroupName(message.modelIds, message.groupName);
-                        // 使用缓存数据重新渲染
+                        // Re-render using cached data
                         this.reactor.reprocess();
                     } else {
                         logger.warn('renameGroup signal missing required data');
@@ -189,18 +189,18 @@ export class MessageController {
 
                 case 'autoGroup': {
                     logger.info('User triggered auto-grouping');
-                    // 获取最新的快照数据
+                    // Get latest snapshot data
                     const latestSnapshot = this.reactor.getLatestSnapshot();
                     if (latestSnapshot && latestSnapshot.models.length > 0) {
-                        // 计算新的分组映射
+                        // Calculate new group mappings
                         const newMappings = ReactorCore.calculateGroupMappings(latestSnapshot.models);
                         await configService.updateGroupMappings(newMappings);
                         logger.info(`Auto-grouped ${Object.keys(newMappings).length} models`);
 
-                        // 清除之前的 pinnedGroups（因为 groupId 已变化）
+                        // Clear previous pinnedGroups (since groupIds have changed)
                         await configService.updateConfig('pinnedGroups', []);
 
-                        // 重新处理数据以刷新 UI
+                        // Reprocess data to refresh UI
                         this.reactor.reprocess();
                     } else {
                         logger.warn('No snapshot data available for auto-grouping');
@@ -209,7 +209,7 @@ export class MessageController {
                 }
 
                 case 'updateNotificationEnabled':
-                    // 处理通知开关变更
+                    // Handle notification switch change
                     if (message.notificationEnabled !== undefined) {
                         const enabled = message.notificationEnabled as boolean;
                         await configService.updateConfig('notificationEnabled', enabled);
@@ -221,7 +221,7 @@ export class MessageController {
                     break;
 
                 case 'updateThresholds':
-                    // 处理阈值更新
+                    // Handle threshold updates
                     if (message.warningThreshold !== undefined && message.criticalThreshold !== undefined) {
                         const warningVal = message.warningThreshold as number;
                         const criticalVal = message.criticalThreshold as number;
@@ -233,14 +233,14 @@ export class MessageController {
                             vscode.window.showInformationMessage(
                                 t('threshold.updated', { value: `Warning: ${warningVal}%, Critical: ${criticalVal}%` }),
                             );
-                            // 注意：notifiedModels 清理逻辑通常在 TelemetryController，这里可能无法直接访问
-                            // 我们可以让 reactor 重新发送数据，如果 TelemetryController 监听了 configChange 或数据变化，会自动处理？
-                            // 最好是这里只更新配置，reprocess 会触发 reactor 的逻辑。
-                            // 但 notifiedModels 是内存状态。
-                            // 临时方案：不清理，或者通过 reactor 发送一个事件？
-                            // 观察 extension.ts，'notifiedModels.clear()' 是直接调用的。
-                            // 我们可以将 notifiedModels 移入 TelemetryController 并提供一个 reset 方法。
-                            // 这里先保留注释。
+                            // Note: notifiedModels cleanup logic is usually in TelemetryController, might not be directly accessible here
+                            // We can let reactor resend data; if TelemetryController listens to configChange or data change, it might handle it?
+                            // Ideally we only update config here, reprocess triggers reactor logic.
+                            // But notifiedModels is in-memory state.
+                            // Temporary solution: do not clean up, or send an event via reactor?
+                            // Observing extension.ts, 'notifiedModels.clear()' is called directly.
+                            // We could move notifiedModels to TelemetryController and provide a reset method.
+                            // Keeping comment for now.
                             this.reactor.reprocess();
                         } else {
                             logger.warn('Invalid threshold values received from dashboard');
@@ -252,7 +252,7 @@ export class MessageController {
                     if (message.modelId && message.groupName !== undefined) {
                         logger.info(`User renamed model ${message.modelId} to: ${message.groupName}`);
                         await configService.updateModelName(message.modelId, message.groupName);
-                        // 使用缓存数据重新渲染
+                        // Re-render using cached data
                         this.reactor.reprocess();
                     } else {
                         logger.warn('renameModel signal missing required data');
@@ -263,7 +263,7 @@ export class MessageController {
                     if (message.statusBarFormat) {
                         logger.info(`User changed status bar format to: ${message.statusBarFormat}`);
                         await configService.updateConfig('statusBarFormat', message.statusBarFormat);
-                        // 立即刷新状态栏
+                        // Immediately refresh status bar
                         this.reactor.reprocess();
                     } else {
                         logger.warn('updateStatusBarFormat signal missing statusBarFormat');
@@ -271,7 +271,7 @@ export class MessageController {
                     break;
 
                 case 'toggleProfile':
-                    // 切换计划详情显示/隐藏
+                    // Toggle plan details visibility
                     logger.info('User toggled profile visibility');
                     {
                         const currentConfig = configService.getConfig();
@@ -281,7 +281,7 @@ export class MessageController {
                     break;
 
                 case 'updateViewMode':
-                    // 更新视图模式
+                    // Update view mode
                     if (message.viewMode) {
                         logger.info(`User changed view mode to: ${message.viewMode}`);
                         await configService.updateConfig('viewMode', message.viewMode);
@@ -297,11 +297,11 @@ export class MessageController {
                         await configService.updateConfig('displayMode', message.displayMode);
 
                         if (message.displayMode === 'quickpick') {
-                            // 1. 关闭 Webview
+                            // 1. Close Webview
                             this.hud.dispose();
-                            // 2. 刷新状态栏
+                            // 2. Refresh Status Bar
                             this.reactor.reprocess();
-                            // 3. 立即弹出 QuickPick (通过命令)
+                            // 3. Immediately open QuickPick (via command)
                             vscode.commands.executeCommand('agCockpit.open');
                         } else {
                             this.reactor.reprocess();
@@ -310,7 +310,7 @@ export class MessageController {
                     break;
 
                 case 'updateDataMasked':
-                    // 更新数据遮罩状态
+                    // Update data masking state
                     if (message.dataMasked !== undefined) {
                         logger.info(`User changed data masking to: ${message.dataMasked}`);
                         await configService.updateConfig('dataMasked', message.dataMasked);
@@ -319,21 +319,21 @@ export class MessageController {
                     break;
 
                 case 'saveCustomGrouping': {
-                    // 保存自定义分组
+                    // Save custom grouping
                     const { customGroupMappings, customGroupNames } = message;
                     if (customGroupMappings) {
                         logger.info(`User saved custom grouping: ${Object.keys(customGroupMappings).length} models`);
                         await configService.updateGroupMappings(customGroupMappings);
                         
-                        // 清除之前的 pinnedGroups（因为 groupId 可能已变化）
+                        // Clear previous pinnedGroups (since groupIds may have changed)
                         await configService.updateConfig('pinnedGroups', []);
                         
-                        // 保存分组名称（如果有）
+                        // Save group names (if any)
                         if (customGroupNames) {
                             await configService.updateConfig('groupingCustomNames', customGroupNames);
                         }
                         
-                        // 刷新 UI
+                        // Refresh UI
                         this.reactor.reprocess();
                     }
                     break;
@@ -341,7 +341,7 @@ export class MessageController {
 
                 // ============ Auto Trigger ============
                 case 'tabChanged':
-                    // Tab 切换时，如果切到自动触发 Tab，发送状态更新
+                    // On Tab switch, if switching to Auto Trigger Tab, send state update
                     if (message.tab === 'auto-trigger') {
                         logger.debug('Switched to Auto Trigger tab');
                         const state = await autoTriggerController.getState();
@@ -396,7 +396,7 @@ export class MessageController {
                 case 'autoTrigger.test':
                     logger.info('User triggered manual test');
                     try {
-                        // 从消息中获取自定义模型列表
+                        // Get custom model list from message
                         const rawModels = (message as { models?: unknown }).models;
                         const testModels = Array.isArray(rawModels)
                             ? rawModels.filter((model): model is string => typeof model === 'string' && model.length > 0)
@@ -408,7 +408,7 @@ export class MessageController {
                             data: state,
                         });
                         if (result.success) {
-                            // 显示成功消息和 AI 回复
+                            // Show success message and AI response
                             const successMsg = t('autoTrigger.triggerSuccess').replace('{duration}', String(result.duration));
                             const responsePreview = result.response 
                                 ? `\n${result.response.substring(0, 200)}${result.response.length > 200 ? '...' : ''}`
@@ -474,7 +474,7 @@ export class MessageController {
                     if (message.id) {
                         await announcementService.markAsRead(message.id);
                         logger.debug(`Marked announcement as read: ${message.id}`);
-                        // 更新前端状态
+                        // Update frontend state
                         const state = await announcementService.getState();
                         this.hud.sendMessage({
                             type: 'announcementState',

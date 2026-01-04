@@ -14,7 +14,7 @@ export const vi = {
     'statusBar.tooltip': 'Nhấn để mở Quota Monitor',
 
     // Dashboard
-    'dashboard.title': 'Antigravity Quota Monitor',
+    'dashboard.title': 'Nano Quota Monitor',
     'dashboard.connecting': 'Đang kết nối...',
     'dashboard.offline': 'Hệ thống ngoại tuyến',
     'dashboard.offlineDesc': 'Không tìm thấy tiến trình Antigravity. Vui lòng đảm bảo Antigravity đang chạy.',

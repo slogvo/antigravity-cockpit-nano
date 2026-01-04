@@ -1,63 +1,63 @@
 /**
- * Antigravity Cockpit - 配置服务
- * 统一管理所有配置的读取和更新
+ * Antigravity Cockpit - Configuration Service
+ * Unified management of configuration reading and updates
  */
 
 import * as vscode from 'vscode';
 import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS, DISPLAY_MODE } from './constants';
 import { logger } from './log_service';
 
-/** 配置对象接口 */
+/** Configuration Object Interface */
 export interface CockpitConfig {
-    /** 刷新间隔（秒） */
+    /** Refresh interval (seconds) */
     refreshInterval: number;
-    /** 是否显示 Prompt Credits */
+    /** Show Prompt Credits */
     showPromptCredits: boolean;
-    /** 置顶的模型列表 */
+    /** List of pinned models */
     pinnedModels: string[];
-    /** 模型排序顺序 */
+    /** Model sort order */
     modelOrder: string[];
-    /** 模型自定义名称映射 (modelId -> displayName) */
+    /** Model customized name map (modelId -> displayName) */
     modelCustomNames: Record<string, string>;
-    /** 日志级别 */
+    /** Log Level */
     logLevel: string;
-    /** 是否启用通知 */
+    /** Enable Notifications */
     notificationEnabled: boolean;
-    /** 状态栏显示格式 */
+    /** Status Bar Format */
     statusBarFormat: string;
-    /** 是否启用分组显示 */
+    /** Enable Grouping */
     groupingEnabled: boolean;
-    /** 分组自定义名称映射 (modelId -> groupName) */
+    /** Group customized name map (modelId -> groupName) */
     groupingCustomNames: Record<string, string>;
-    /** 是否在状态栏显示分组 */
+    /** Show Group in Status Bar */
     groupingShowInStatusBar: boolean;
-    /** 置顶的分组列表 */
+    /** List of pinned groups */
     pinnedGroups: string[];
-    /** 分组排序顺序 */
+    /** Group sort order */
     groupOrder: string[];
-    /** 分组映射 (modelId -> groupId) */
+    /** Group mappings (modelId -> groupId) */
     groupMappings: Record<string, string>;
-    /** 警告阈值 (%) */
+    /** Warning Threshold (%) */
     warningThreshold: number;
-    /** 危险阈值 (%) */
+    /** Critical Threshold (%) */
     criticalThreshold: number;
-    /** 显示模式 */
+    /** Display Mode */
     displayMode: string;
-    /** 是否隐藏计划详情面板 */
+    /** Hide Plan Details Panel */
     profileHidden: boolean;
-    /** 视图模式 (card | list) */
+    /** View Mode (card | list) */
     viewMode: string;
-    /** 是否遮罩敏感数据 */
+    /** Mask Sensitive Data */
     dataMasked: boolean;
 }
 
-/** 配置服务类 */
+/** Configuration Service Class */
 class ConfigService {
     private readonly configSection = 'agCockpit';
     private configChangeListeners: Array<(config: CockpitConfig) => void> = [];
 
     constructor() {
-        // 监听配置变化
+        // Listen for configuration changes
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration(this.configSection)) {
                 const newConfig = this.getConfig();
@@ -67,7 +67,7 @@ class ConfigService {
     }
 
     /**
-     * 获取完整配置
+     * Get complete configuration
      */
     getConfig(): CockpitConfig {
         const config = vscode.workspace.getConfiguration(this.configSection);
@@ -97,14 +97,14 @@ class ConfigService {
     }
 
     /**
-     * 获取刷新间隔（毫秒）
+     * Get refresh interval (ms)
      */
     getRefreshIntervalMs(): number {
         return this.getConfig().refreshInterval * 1000;
     }
 
     /**
-     * 更新配置项
+     * Update configuration item
      */
     async updateConfig<K extends keyof CockpitConfig>(
         key: K, 
@@ -117,7 +117,7 @@ class ConfigService {
     }
 
     /**
-     * 切换置顶模型
+     * Toggle pinned model
      */
     async togglePinnedModel(modelId: string): Promise<string[]> {
         logger.info(`Toggling pin state for model: ${modelId}`);
@@ -142,7 +142,7 @@ class ConfigService {
     }
 
     /**
-     * 切换显示 Prompt Credits
+     * Toggle Show Prompt Credits
      */
     async toggleShowPromptCredits(): Promise<boolean> {
         const config = this.getConfig();
@@ -152,23 +152,23 @@ class ConfigService {
     }
 
     /**
-     * 更新模型顺序
+     * Update model order
      */
     async updateModelOrder(order: string[]): Promise<void> {
         await this.updateConfig('modelOrder', order);
     }
 
     /**
-     * 重置模型排序（清除自定义排序）
+     * Reset model order (Clear custom order)
      */
     async resetModelOrder(): Promise<void> {
         await this.updateConfig('modelOrder', []);
     }
 
     /**
-     * 更新模型自定义名称
-     * @param modelId 模型 ID
-     * @param displayName 新的显示名称
+     * Update Model Custom Name
+     * @param modelId Model ID
+     * @param displayName New display name
      */
     async updateModelName(modelId: string, displayName: string): Promise<void> {
         const config = this.getConfig();
@@ -177,7 +177,7 @@ class ConfigService {
         if (displayName.trim()) {
             customNames[modelId] = displayName.trim();
         } else {
-            // 如果名称为空，删除自定义名称（恢复原始名称）
+            // If name is empty, delete custom name (revert to original name)
             delete customNames[modelId];
         }
         
@@ -186,16 +186,16 @@ class ConfigService {
     }
 
     /**
-     * 更新分组名称
-     * 将分组中所有模型关联到指定名称（锚点共识机制）
-     * @param modelIds 分组内的所有模型 ID
-     * @param groupName 新的分组名称
+     * Update Group Name
+     * Associate all models in a group with a specified name (Anchor Consensus Mechanism)
+     * @param modelIds All Model IDs in the group
+     * @param groupName New group name
      */
     async updateGroupName(modelIds: string[], groupName: string): Promise<void> {
         const config = this.getConfig();
         const customNames = { ...config.groupingCustomNames };
         
-        // 将组内所有模型 ID 都关联到该名称
+        // Associate all model IDs in the group with this name
         for (const modelId of modelIds) {
             customNames[modelId] = groupName;
         }
@@ -205,7 +205,7 @@ class ConfigService {
     }
 
     /**
-     * 切换分组显示
+     * Toggle Grouping Enabled
      */
     async toggleGroupingEnabled(): Promise<boolean> {
         const config = this.getConfig();
@@ -215,7 +215,7 @@ class ConfigService {
     }
 
     /**
-     * 切换分组状态栏显示
+     * Toggle Group Status Bar Display
      */
     async toggleGroupingStatusBar(): Promise<boolean> {
         const config = this.getConfig();
@@ -225,7 +225,7 @@ class ConfigService {
     }
 
     /**
-     * 切换分组置顶状态
+     * Toggle Pinned Group
      */
     async togglePinnedGroup(groupId: string): Promise<string[]> {
         logger.info(`Toggling pin state for group: ${groupId}`);
@@ -248,35 +248,35 @@ class ConfigService {
     }
 
     /**
-     * 更新分组顺序
+     * Update Group Order
      */
     async updateGroupOrder(order: string[]): Promise<void> {
         await this.updateConfig('groupOrder', order);
     }
 
     /**
-     * 重置分组排序
+     * Reset Group Order
      */
     async resetGroupOrder(): Promise<void> {
         await this.updateConfig('groupOrder', []);
     }
 
     /**
-     * 更新分组映射 (modelId -> groupId)
+     * Update Group Mappings (modelId -> groupId)
      */
     async updateGroupMappings(mappings: Record<string, string>): Promise<void> {
         await this.updateConfig('groupMappings', mappings);
     }
 
     /**
-     * 清除分组映射（触发重新自动分组）
+     * Clear Group Mappings (Trigger re-auto-grouping)
      */
     async clearGroupMappings(): Promise<void> {
         await this.updateConfig('groupMappings', {});
     }
 
     /**
-     * 注册配置变化监听器
+     * Register Configuration Change Listener
      */
     onConfigChange(listener: (config: CockpitConfig) => void): vscode.Disposable {
         this.configChangeListeners.push(listener);
@@ -291,7 +291,7 @@ class ConfigService {
     }
 
     /**
-     * 检查模型是否被置顶
+     * Check if model is pinned
      */
     isModelPinned(modelId: string): boolean {
         return this.getConfig().pinnedModels.some(
@@ -300,5 +300,5 @@ class ConfigService {
     }
 }
 
-// 导出单例
+// Export Singleton
 export const configService = new ConfigService();

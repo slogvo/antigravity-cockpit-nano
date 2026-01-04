@@ -1,55 +1,55 @@
 /**
- * Antigravity Cockpit - 平台策略
- * 针对不同操作系统的进程检测策略
+ * Antigravity Cockpit - Platform Strategies
+ * Process detection strategies for different operating systems
  */
 
 import { logger } from '../shared/log_service';
 import { PlatformStrategy, ProcessInfo } from '../shared/types';
 
 /**
- * Windows 平台策略
+ * Windows Platform Strategy
  */
 export class WindowsStrategy implements PlatformStrategy {
     /**
-     * 判断命令行是否属于 Antigravity 进程
-     * 精准匹配：必须同时满足以下条件：
-     * 1. 必须有 --extension_server_port 参数
-     * 2. 必须有 --csrf_token 参数
-     * 3. 必须有 --app_data_dir antigravity 参数
+     * Check if command line belongs to Antigravity process
+     * Exact match: Must satisfy all following conditions:
+     * 1. Must have --extension_server_port argument
+     * 2. Must have --csrf_token argument
+     * 3. Must have --app_data_dir antigravity argument
      */
     private isAntigravityProcess(commandLine: string): boolean {
-        // 条件1：必须包含 --extension_server_port 参数
+        // Condition 1: Must contain --extension_server_port argument
         if (!commandLine.includes('--extension_server_port')) {
             return false;
         }
 
-        // 条件2：必须包含 --csrf_token 参数
+        // Condition 2: Must contain --csrf_token argument
         if (!commandLine.includes('--csrf_token')) {
             return false;
         }
 
-        // 条件3：必须有 --app_data_dir antigravity 参数（最可靠的标识）
+        // Condition 3: Must have --app_data_dir antigravity argument (most reliable indicator)
         return /--app_data_dir\s+antigravity\b/i.test(commandLine);
     }
 
     /**
-     * 按进程名获取进程列表命令
-     * 仅使用 PowerShell
+     * Get process list command by process name
+     * Use PowerShell only
      */
     getProcessListCommand(processName: string): string {
         const utf8Header = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ';
-        // 使用单引号包裹 Filter 参数，内部 name 值使用双单引号转义
-        // chcp 65001 >nul 确保 CMD 环境以 UTF-8 运行，避免乱码
+        // Use single quotes to wrap Filter argument, escape internal name value with double single quotes
+        // chcp 65001 >nul ensures CMD environment runs in UTF-8 to avoid garbled text
         return `chcp 65001 >nul && powershell -NoProfile -Command "${utf8Header}Get-CimInstance Win32_Process -Filter 'name=''${processName}''' | Select-Object ProcessId,CommandLine | ConvertTo-Json"`;
     }
 
     /**
-     * 按关键字获取进程列表命令（查找所有包含 csrf_token 的进程）
-     * 这是备用方案，当按进程名查找失败时使用
+     * Get process list command by keyword (Find all processes containing csrf_token)
+     * This is a fallback solution when search by process name fails
      */
     getProcessByKeywordCommand(): string {
         const utf8Header = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ';
-        // chcp 65001 >nul 确保 CMD 环境以 UTF-8 运行
+        // chcp 65001 >nul ensures CMD environment runs in UTF-8
         return `chcp 65001 >nul && powershell -NoProfile -Command "${utf8Header}Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'csrf_token' } | Select-Object ProcessId,Name,CommandLine | ConvertTo-Json"`;
     }
 
@@ -57,13 +57,13 @@ export class WindowsStrategy implements PlatformStrategy {
         logger.debug('[WindowsStrategy] Parsing JSON process info...');
 
         try {
-            // 清理可能存在的非 JSON 杂质（虽然 chcp 65001 应该能解决大部分，但防御性编程）
+            // Clean up possible non-JSON impurities (although chcp 65001 should solve most issues, defensive programming)
             const jsonStart = stdout.indexOf('[');
             const jsonObjectStart = stdout.indexOf('{');
             let cleanStdout = stdout;
 
             if (jsonStart >= 0 || jsonObjectStart >= 0) {
-                // 找到最早的 JSON 开始符号
+                // Find earliest JSON start symbol
                 const start = (jsonStart >= 0 && jsonObjectStart >= 0) 
                     ? Math.min(jsonStart, jsonObjectStart) 
                     : Math.max(jsonStart, jsonObjectStart);
@@ -162,14 +162,14 @@ export class WindowsStrategy implements PlatformStrategy {
 }
 
 /**
- * Unix (macOS/Linux) 平台策略
+ * Unix (macOS/Linux) Platform Strategy
  */
 export class UnixStrategy implements PlatformStrategy {
     private platform: string;
     private targetPid: number = 0;
-    /** 可用的端口检测命令: 'lsof', 'ss', 或 'netstat' */
+    /** Available port detection command: 'lsof', 'ss', or 'netstat' */
     private availablePortCommand: 'lsof' | 'ss' | 'netstat' | null = null;
-    /** 是否已检测过命令可用性 */
+    /** Whether command availability has been checked */
     private portCommandChecked: boolean = false;
 
     constructor(platform: string) {
@@ -178,8 +178,8 @@ export class UnixStrategy implements PlatformStrategy {
     }
 
     /**
-     * 检测系统上可用的端口检测命令
-     * 优先顺序: lsof > ss > netstat
+     * Detect available port detection command on system
+     * Priority: lsof > ss > netstat
      */
     private async detectAvailablePortCommand(): Promise<void> {
         if (this.portCommandChecked) {
@@ -187,7 +187,7 @@ export class UnixStrategy implements PlatformStrategy {
         }
         this.portCommandChecked = true;
 
-        // 使用动态导入避免顶层依赖
+        // Use dynamic import to avoid top-level dependency
         const { exec } = await import('child_process');
         const { promisify } = await import('util');
         const execAsync = promisify(exec);
@@ -201,7 +201,7 @@ export class UnixStrategy implements PlatformStrategy {
                 logger.info(`[UnixStrategy] Port command available: ${cmd}`);
                 return;
             } catch {
-                // 命令不可用，继续尝试下一个
+                // Command not available, try next
             }
         }
 
@@ -209,32 +209,32 @@ export class UnixStrategy implements PlatformStrategy {
     }
 
     /**
-     * 判断命令行是否属于 Antigravity 进程
-     * 精准匹配：必须同时满足以下条件：
-     * 1. 必须有 --extension_server_port 参数
-     * 2. 必须有 --csrf_token 参数
-     * 3. 必须有 --app_data_dir antigravity 参数
+     * Check if command line belongs to Antigravity process
+     * Exact match: Must satisfy all following conditions:
+     * 1. Must have --extension_server_port argument
+     * 2. Must have --csrf_token argument
+     * 3. Must have --app_data_dir antigravity argument
      */
     private isAntigravityProcess(commandLine: string): boolean {
-        // 条件1：必须包含 --extension_server_port 参数
+        // Condition 1: Must contain --extension_server_port argument
         if (!commandLine.includes('--extension_server_port')) {
             return false;
         }
 
-        // 条件2：必须包含 --csrf_token 参数
+        // Condition 2: Must contain --csrf_token argument
         if (!commandLine.includes('--csrf_token')) {
             return false;
         }
 
-        // 条件3：必须有 --app_data_dir antigravity 参数（最可靠的标识）
+        // Condition 3: Must have --app_data_dir antigravity argument (most reliable indicator)
         return /--app_data_dir\s+antigravity\b/i.test(commandLine);
     }
 
     getProcessListCommand(processName: string): string {
-        // 使用 ps -ww 保证命令行不被截断
-        // -ww: 无限宽度
-        // -eo: 自定义输出格式
-        // pid,ppid,args: 进程ID、父进程ID、完整命令行
+        // Use ps -ww to ensure command line is not truncated
+        // -ww: unlimited width
+        // -eo: custom output format
+        // pid,ppid,args: Process ID, Parent Process ID, Full Command Line
         return `ps -ww -eo pid,ppid,args | grep "${processName}" | grep -v grep`;
     }
 
@@ -248,7 +248,7 @@ export class UnixStrategy implements PlatformStrategy {
         const candidates: Array<{ pid: number; ppid: number; extensionPort: number; csrfToken: string }> = [];
 
         for (const line of lines) {
-            // ps -ww -eo pid,ppid,args 格式: "  PID  PPID COMMAND..."
+            // ps -ww -eo pid,ppid,args format: "  PID  PPID COMMAND..."
             const parts = line.trim().split(/\s+/);
             if (parts.length < 3) {
                 continue;
@@ -265,7 +265,7 @@ export class UnixStrategy implements PlatformStrategy {
             const portMatch = cmd.match(/--extension_server_port[=\s]+(\d+)/);
             const tokenMatch = cmd.match(/--csrf_token[=\s]+([a-zA-Z0-9-]+)/i);
 
-            // 必须同时满足：有 csrf_token 且是 Antigravity 进程
+            // Must satisfy both: Has csrf_token and IS Antigravity process
             if (tokenMatch?.[1] && this.isAntigravityProcess(cmd)) {
                 const extensionPort = portMatch?.[1] ? parseInt(portMatch[1], 10) : 0;
                 const csrfToken = tokenMatch[1];
@@ -279,8 +279,8 @@ export class UnixStrategy implements PlatformStrategy {
             return [];
         }
 
-        // Unix 平台排序策略：当前进程的子进程 > 其他进程
-        // 为了提高成功率，我们将子进程排在第一位，但返回所有候选进程
+        // Unix platform sort strategy: Child process of current process > Other processes
+        // To improve success rate, we put child process first, but return all candidates
         return candidates.sort((a, b) => {
             if (a.ppid === currentPid) { return -1; }
             if (b.ppid === currentPid) { return 1; }
@@ -292,12 +292,12 @@ export class UnixStrategy implements PlatformStrategy {
         // Save target PID
         this.targetPid = pid;
 
-        // macOS: 优先使用 lsof
+        // macOS: Prefer lsof
         if (this.platform === 'darwin') {
             return `lsof -nP -a -iTCP -sTCP:LISTEN -p ${pid} 2>/dev/null | grep -E "^\\S+\\s+${pid}\\s"`;
         }
 
-        // Linux: 根据检测到的可用命令选择
+        // Linux: Choose based on detected available command
         switch (this.availablePortCommand) {
             case 'lsof':
                 return `lsof -nP -a -iTCP -sTCP:LISTEN -p ${pid} 2>/dev/null | grep -E "^\\S+\\s+${pid}\\s"`;
@@ -306,13 +306,13 @@ export class UnixStrategy implements PlatformStrategy {
             case 'netstat':
                 return `netstat -tulpn 2>/dev/null | grep ${pid}`;
             default:
-                // 回退：尝试多个命令
+                // Fallback: Try multiple commands
                 return `ss -tlnp 2>/dev/null | grep "pid=${pid}," || lsof -nP -a -iTCP -sTCP:LISTEN -p ${pid} 2>/dev/null | grep -E "^\\S+\\s+${pid}\\s" || netstat -tulpn 2>/dev/null | grep ${pid}`;
         }
     }
 
     /**
-     * 确保端口检测命令可用（在获取端口列表前调用）
+     * Ensure port detection command is available (Call before getting port list)
      */
     async ensurePortCommandAvailable(): Promise<void> {
         await this.detectAvailablePortCommand();
@@ -386,10 +386,10 @@ export class UnixStrategy implements PlatformStrategy {
     }
 
     getDiagnosticCommand(): string {
-        // 列出所有包含 'language' 或 'antigravity' 的进程
+        // List all processes containing 'language' or 'antigravity'
         return 'ps aux | grep -E \'language|antigravity\' | grep -v grep';
     }
 }
 
-// 保持向后兼容的导出
+// Export for backward compatibility
 export type platform_strategy = PlatformStrategy;

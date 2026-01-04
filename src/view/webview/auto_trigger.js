@@ -1,27 +1,27 @@
 /**
  * Antigravity Cockpit - Auto Trigger Tab JS (Compact Layout)
- * 自动触发功能的前端逻辑 - 紧凑布局版本
+ * Auto Trigger Frontend Logic - Compact Layout Version
  */
 
 (function() {
     'use strict';
 
-    // 获取 VS Code API
+    // Get VS Code API
     const vscode = window.__vscodeApi || (window.__vscodeApi = acquireVsCodeApi());
 
-    // 国际化
+    // Localization
     const i18n = window.__autoTriggerI18n || {};
     const t = (key) => i18n[key] || key;
 
     const baseTimeOptions = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
 
-    // 状态
+    // State
     let currentState = null;
     let availableModels = [];
-    let selectedModels = [];  // 从 state.schedule.selectedModels 获取
+    let selectedModels = [];  // Get from state.schedule.selectedModels
     let testSelectedModels = [];
     
-    // 配置状态
+    // Config State
     let configEnabled = false;
     let configMode = 'daily';
     let configDailyTimes = ['08:00'];
@@ -33,7 +33,7 @@
     const baseDailyTimes = [...baseTimeOptions];
     const baseWeeklyTimes = [...baseTimeOptions];
 
-    // ============ 初始化 ============
+    // ============ Initialization ============
 
     function init() {
         vscode.postMessage({ command: 'autoTrigger.getState' });
@@ -41,28 +41,28 @@
     }
 
     function bindEvents() {
-        // 授权按钮
+        // Auth Button
         document.getElementById('at-auth-btn')?.addEventListener('click', () => {
             vscode.postMessage({ command: 'autoTrigger.authorize' });
         });
 
-        // 配置按钮
+        // Config Button
         document.getElementById('at-config-btn')?.addEventListener('click', openConfigModal);
         document.getElementById('at-config-close')?.addEventListener('click', closeConfigModal);
         document.getElementById('at-config-cancel')?.addEventListener('click', closeConfigModal);
         document.getElementById('at-config-save')?.addEventListener('click', saveConfig);
 
-        // 测试按钮
+        // Test Button
         document.getElementById('at-test-btn')?.addEventListener('click', openTestModal);
         document.getElementById('at-test-close')?.addEventListener('click', closeTestModal);
         document.getElementById('at-test-cancel')?.addEventListener('click', closeTestModal);
         document.getElementById('at-test-run')?.addEventListener('click', runTest);
 
-        // 历史按钮
+        // History Button
         document.getElementById('at-history-btn')?.addEventListener('click', openHistoryModal);
         document.getElementById('at-history-close')?.addEventListener('click', closeHistoryModal);
 
-        // 取消授权确认弹框
+        // Revoke Confirmation Modal
         document.getElementById('at-revoke-close')?.addEventListener('click', closeRevokeModal);
         document.getElementById('at-revoke-cancel')?.addEventListener('click', closeRevokeModal);
         document.getElementById('at-revoke-confirm')?.addEventListener('click', confirmRevoke);
@@ -73,7 +73,7 @@
             closeHistoryModal();
         });
 
-        // 模式选择
+        // Mode Selection
         document.getElementById('at-mode-select')?.addEventListener('change', (e) => {
             configMode = e.target.value;
             updateModeConfigVisibility();
@@ -81,13 +81,13 @@
             updatePreview();
         });
 
-        // 启用开关
+        // Enable Toggle
         document.getElementById('at-enable-schedule')?.addEventListener('change', (e) => {
             configEnabled = e.target.checked;
             updateModeConfigVisibility(); // Enable/Disable mode selector
         });
 
-        // 时间选择 - Daily
+        // Time Selection - Daily
         document.getElementById('at-daily-times')?.addEventListener('click', (e) => {
             if (e.target.classList.contains('at-chip')) {
                 const time = e.target.dataset.time;
@@ -98,7 +98,7 @@
 
         bindCustomTimeInput('at-daily-custom-time', 'at-daily-add-time', 'daily');
 
-        // 时间选择 - Weekly
+        // Time Selection - Weekly
         document.getElementById('at-weekly-times')?.addEventListener('click', (e) => {
             if (e.target.classList.contains('at-chip')) {
                 const time = e.target.dataset.time;
@@ -109,7 +109,7 @@
 
         bindCustomTimeInput('at-weekly-custom-time', 'at-weekly-add-time', 'weekly');
 
-        // 星期选择
+        // Day Selection
         document.getElementById('at-weekly-days')?.addEventListener('click', (e) => {
             if (e.target.classList.contains('at-chip')) {
                 const day = parseInt(e.target.dataset.day, 10);
@@ -118,7 +118,7 @@
             }
         });
 
-        // 快捷按钮
+        // Quick Buttons
         document.querySelectorAll('.at-quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const preset = btn.dataset.preset;
@@ -130,7 +130,7 @@
             });
         });
 
-        // 间隔配置
+        // Interval Config
         document.getElementById('at-interval-hours')?.addEventListener('change', (e) => {
             configIntervalHours = parseInt(e.target.value, 10) || 4;
             updatePreview();
@@ -144,7 +144,7 @@
             updatePreview();
         });
 
-        // Crontab 验证
+        // Crontab Validation
         document.getElementById('at-crontab-validate')?.addEventListener('click', () => {
             const input = document.getElementById('at-crontab-input');
             const result = document.getElementById('at-crontab-result');
@@ -161,16 +161,16 @@
             }
         });
         
-        // Crontab 输入监听：当有输入时禁用普通模式配置
+        // Crontab Input Listener: Disable normal mode config when there is input
         document.getElementById('at-crontab-input')?.addEventListener('input', (e) => {
             const hasCrontab = e.target.value.trim().length > 0;
             updateCrontabExclusivity(hasCrontab);
             if (hasCrontab) {
-                updatePreview();  // 刷新预览
+                updatePreview();  // Refresh Preview
             }
         });
 
-        // 点击模态框外部关闭
+        // Close Modal on Click Outside
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -180,7 +180,7 @@
         });
     }
 
-    // ============ 模态框操作 ============
+    // ============ Modal Operations ============
 
     function openConfigModal() {
         loadConfigFromState();
@@ -197,16 +197,16 @@
     }
 
     function openTestModal() {
-        // 获取可用模型的 ID 列表
+        // Get available model IDs
         const availableIds = availableModels.map(m => m.id);
         
-        // 从 selectedModels 中过滤，只保留在可用模型列表中的
+        // Filter selectedModels to keep only those in available model list
         const validSelected = selectedModels.filter(id => availableIds.includes(id));
         
         if (validSelected.length > 0) {
             testSelectedModels = [...validSelected];
         } else if (availableModels.length > 0) {
-            // 如果没有有效选择，默认选中第一个可用模型
+            // If no valid selection, default to the first available model
             testSelectedModels = [availableModels[0].id];
         } else {
             testSelectedModels = [];
@@ -242,7 +242,7 @@
         closeRevokeModal();
     }
 
-    // ============ 配置操作 ============
+    // ============ Config Operations ============
 
     function loadConfigFromState() {
         if (!currentState?.schedule) return;
@@ -263,11 +263,11 @@
         document.getElementById('at-interval-hours').value = configIntervalHours;
         document.getElementById('at-interval-start').value = configIntervalStart;
         
-        // 恢复 Crontab
+        // Restore Crontab
         const crontabInput = document.getElementById('at-crontab-input');
         if (crontabInput) {
             crontabInput.value = s.crontab || '';
-            // 更新互斥状态（如果有 Crontab，禁用上面的配置）
+            // Update exclusivity state (Disable above config if Crontab is present)
             updateCrontabExclusivity(!!s.crontab);
         }
         document.getElementById('at-interval-end').value = configIntervalEnd;
@@ -295,7 +295,7 @@
         closeConfigModal();
     }
 
-    let isTestRunning = false;  // 防止重复点击
+    let isTestRunning = false;  // Prevent duplicate clicks
 
     function getTestSelectedModelsFromDom() {
         const container = document.getElementById('at-test-models');
@@ -314,12 +314,12 @@
         }
         
         if (testSelectedModels.length === 0) {
-            // 使用第一个可用模型作为默认
+            // Use first available model as default
             const defaultModel = availableModels.length > 0 ? availableModels[0].id : 'gemini-3-flash';
             testSelectedModels = [defaultModel];
         }
         
-        // 设置加载状态
+        // Set loading state
         isTestRunning = true;
         const runBtn = document.getElementById('at-test-run');
         if (runBtn) {
@@ -327,10 +327,10 @@
             runBtn.innerHTML = `<span class="at-spinner"></span> ${t('autoTrigger.testing')}`;
         }
         
-        // 关闭弹窗
+        // Close modal
         closeTestModal();
         
-        // 显示状态提示
+        // Show status hint
         showTestingStatus();
         
         vscode.postMessage({
@@ -343,7 +343,7 @@
         const statusCard = document.getElementById('at-status-card');
         if (!statusCard) return;
         
-        // 添加测试中提示
+        // Add testing in progress banner
         let testingBanner = document.getElementById('at-testing-banner');
         if (!testingBanner) {
             testingBanner = document.createElement('div');
@@ -361,7 +361,7 @@
             testingBanner.classList.add('hidden');
         }
         
-        // 重置按钮状态
+        // Reset button state
         isTestRunning = false;
         const runBtn = document.getElementById('at-test-run');
         if (runBtn) {
@@ -370,23 +370,23 @@
         }
     }
 
-    // ============ UI 更新 ============
+    // ============ UI Update ============
 
     function updateCrontabExclusivity(hasCrontab) {
-        // 当 Crontab 有内容时，禁用普通模式配置
+        // Disable normal mode config when Crontab has content
         const modeSelect = document.getElementById('at-mode-select');
         const dailyConfig = document.getElementById('at-config-daily');
         const weeklyConfig = document.getElementById('at-config-weekly');
         const intervalConfig = document.getElementById('at-config-interval');
         
         if (hasCrontab) {
-            // 禁用模式选择和配置
+            // Disable mode selection and configuration
             if (modeSelect) modeSelect.disabled = true;
             dailyConfig?.classList.add('at-disabled');
             weeklyConfig?.classList.add('at-disabled');
             intervalConfig?.classList.add('at-disabled');
         } else {
-            // 恢复
+            // Restore
             if (modeSelect) modeSelect.disabled = false;
             dailyConfig?.classList.remove('at-disabled');
             weeklyConfig?.classList.remove('at-disabled');
@@ -513,7 +513,7 @@
             return;
         }
 
-        // availableModels 现在是 ModelInfo 对象数组: { id, displayName, modelConstant }
+        // availableModels is now an array of ModelInfo objects: { id, displayName, modelConstant }
         container.innerHTML = availableModels.map(model => {
             const isSelected = selectedModels.includes(model.id);
             return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${model.id}">${model.displayName}</div>`;
@@ -545,8 +545,8 @@
             return;
         }
 
-        // availableModels 现在是 ModelInfo 对象数组: { id, displayName, modelConstant }
-        // 测试模型为单选模式
+        // availableModels is now an array of ModelInfo objects: { id, displayName, modelConstant }
+        // Test models are in single-selection mode
         container.innerHTML = availableModels.map(model => {
             const isSelected = testSelectedModels.length > 0 && testSelectedModels[0] === model.id;
             return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${model.id}">${model.displayName}</div>`;
@@ -555,9 +555,9 @@
         container.querySelectorAll('.at-model-item').forEach(item => {
             item.addEventListener('click', () => {
                 const modelId = item.dataset.model;
-                // 单选模式：点击选中当前项，取消其他项
+                // Single selection mode: click to select current item, deselect others
                 testSelectedModels = [modelId];
-                // 更新 UI
+                // Update UI
                 container.querySelectorAll('.at-model-item').forEach(el => {
                     el.classList.toggle('selected', el.dataset.model === modelId);
                 });
@@ -582,7 +582,7 @@
             const icon = trigger.success ? '✅' : '❌';
             const statusText = trigger.success ? t('autoTrigger.success') : t('autoTrigger.failed');
             
-            // 显示请求内容和响应
+            // Show request content and response
             let contentHtml = '';
             if (trigger.prompt) {
                 contentHtml += `<div class="at-history-prompt">📤 ${escapeHtml(trigger.prompt)}</div>`;
@@ -594,7 +594,7 @@
                 contentHtml = `<div class="at-history-message">${statusText}</div>`;
             }
 
-            // 触发类型标签
+            // Trigger type tag
             const typeLabel = trigger.triggerType === 'auto' ? t('autoTrigger.typeAuto') : t('autoTrigger.typeManual');
             const typeClass = trigger.triggerType === 'auto' ? 'at-history-type-auto' : 'at-history-type-manual';
             const typeBadge = `<span class="at-history-type-badge ${typeClass}">${typeLabel}</span>`;
@@ -612,7 +612,7 @@
         }).join('');
     }
     
-    // HTML 转义函数
+    // HTML Escape Function
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -623,15 +623,15 @@
         const container = document.getElementById('at-next-runs');
         if (!container) return;
 
-        // 检查是否有 Crontab 输入
+        // Check if there is Crontab input
         const crontabInput = document.getElementById('at-crontab-input');
         const crontab = crontabInput?.value?.trim();
         
         if (crontab) {
-            // 使用 Crontab 计算预览
+            // Calculate preview using Crontab
             const nextRuns = calculateCrontabNextRuns(crontab, 5);
             if (nextRuns.length === 0) {
-                container.innerHTML = `<li style="color: var(--vscode-errorForeground)">无效的 Crontab 表达式</li>`;
+                container.innerHTML = `<li style="color: var(--vscode-errorForeground)">Invalid Crontab expression</li>`;
                 return;
             }
             container.innerHTML = nextRuns.map((date, idx) => {
@@ -640,7 +640,7 @@
             return;
         }
 
-        // 普通模式预览
+        // Normal mode preview
         const config = {
             repeatMode: configMode,
             dailyTimes: configDailyTimes,
@@ -664,7 +664,7 @@
         }).join('');
     }
     
-    // 解析 Crontab 并计算下次运行时间（简化版）
+    // Parse Crontab and calculate next run time (Simplified version)
     function calculateCrontabNextRuns(crontab, count) {
         try {
             const parts = crontab.split(/\s+/);
@@ -674,7 +674,7 @@
             const results = [];
             const now = new Date();
             
-            // 简化解析：支持 * 和具体数值
+            // Simplified parsing: supports * and specific values
             const parseField = (field, max) => {
                 if (field === '*') return Array.from({ length: max + 1 }, (_, i) => i);
                 if (field.includes(',')) return field.split(',').map(Number);
@@ -692,7 +692,7 @@
             const minutes = parseField(minute, 59);
             const hours = parseField(hour, 23);
             
-            // 遍历未来 7 天
+            // Traverse the next 7 days
             for (let dayOffset = 0; dayOffset < 7 && results.length < count; dayOffset++) {
                 for (const h of hours) {
                     for (const m of minutes) {
@@ -786,7 +786,7 @@
         }
     }
 
-    // ============ 状态更新 ============
+    // ============ State Update ============
 
     function updateState(state) {
         currentState = state;
@@ -796,7 +796,7 @@
             selectedModels = state.schedule.selectedModels;
         }
 
-        // 隐藏测试中状态（如果收到新状态说明测试完成了）
+        // Hide testing status (receiving new state means test completed)
         hideTestingStatus();
         
         updateAuthUI(state.authorization);
@@ -826,7 +826,7 @@
             statusGrid?.classList.remove('hidden');
             actions?.classList.remove('hidden');
 
-            // 重新绑定按钮事件
+            // Re-bind button events
             document.getElementById('at-reauth-btn')?.addEventListener('click', () => {
                 vscode.postMessage({ command: 'autoTrigger.authorize' });
             });
@@ -855,17 +855,17 @@
     function updateStatusUI(state) {
         const schedule = state.schedule || {};
         
-        // 状态
+        // Status
         const statusValue = document.getElementById('at-status-value');
         if (statusValue) {
             statusValue.textContent = schedule.enabled ? t('autoTrigger.enabled') : t('autoTrigger.disabled');
             statusValue.style.color = schedule.enabled ? 'var(--vscode-charts-green)' : '';
         }
 
-        // 更新 Tab 状态点
+        // Update Tab Status Dot
         const tabDot = document.getElementById('at-tab-status-dot');
         if (tabDot) {
-            // 只有在已授权且已启用的情况下显示状态点
+            // Only show status dot if authorized and enabled
             const isAuthorized = state.authorization?.isAuthorized;
             const isEnabled = schedule.enabled;
             if (isAuthorized && isEnabled) {
@@ -875,12 +875,12 @@
             }
         }
 
-        // 模式 - 支持 Crontab
+        // Mode - Supports Crontab
         const modeValue = document.getElementById('at-mode-value');
         if (modeValue) {
             let modeText = '--';
             if (schedule.crontab) {
-                // Crontab 模式
+                // Crontab Mode
                 modeText = `Crontab: ${schedule.crontab}`;
             } else if (schedule.repeatMode === 'daily' && schedule.dailyTimes?.length) {
                 modeText = `${t('autoTrigger.daily')} ${schedule.dailyTimes[0]}`;
@@ -892,29 +892,29 @@
             modeValue.textContent = modeText;
         }
 
-        // 模型 - 显示所有选中模型的完整名称
+        // Models - Show full names of all selected models
         const modelsValue = document.getElementById('at-models-value');
         if (modelsValue) {
             const modelIds = schedule.selectedModels || ['gemini-3-flash'];
-            // 从 availableModels 中查找 displayName
+            // Find displayName from availableModels
             const getDisplayName = (id) => {
                 const model = availableModels.find(m => m.id === id);
                 return model?.displayName || id;
             };
-            // 显示所有模型名称，用逗号分隔
+            // Show all model names, comma separated
             const allNames = modelIds.map(id => getDisplayName(id));
             modelsValue.textContent = allNames.join(', ');
         }
 
-        // 下次触发
+        // Next Trigger
         const nextValue = document.getElementById('at-next-value');
         if (nextValue) {
-            // 使用正确的字段名 nextTriggerTime
+            // Use correct field name nextTriggerTime
             if (schedule.enabled && state.nextTriggerTime) {
                 const nextDate = new Date(state.nextTriggerTime);
                 nextValue.textContent = formatDateTime(nextDate);
             } else if (schedule.enabled && schedule.crontab) {
-                // 如果有 Crontab，前端计算下次触发时间
+                // If Crontab exists, calculate next trigger time on frontend
                 const nextRuns = calculateCrontabNextRuns(schedule.crontab, 1);
                 if (nextRuns.length > 0) {
                     nextValue.textContent = formatDateTime(nextRuns[0]);
@@ -934,7 +934,7 @@
         }
     }
 
-    // ============ 消息监听 ============
+    // ============ Message Listening ============
 
     window.addEventListener('message', event => {
         const message = event.data;
@@ -946,13 +946,13 @@
         }
     });
 
-    // 导出
+    // Export
     window.AutoTriggerTab = {
         init,
         updateState,
     };
 
-    // 初始化
+    // Initialization
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

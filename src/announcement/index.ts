@@ -1,6 +1,6 @@
 /**
  * Antigravity Cockpit - Announcement Module
- * 公告模块入口
+ * Announcement Module Entry
  */
 
 export * from './types';

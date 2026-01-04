@@ -1,6 +1,6 @@
 /**
- * Antigravity Cockpit - 轻量级错误上报服务
- * 直接使用 Sentry API，不依赖 SDK，体积更小
+ * Antigravity Cockpit - Lightweight Error Reporting Service
+ * Directly uses Sentry API, no SDK dependency for smaller size
  */
 
 import * as https from 'https';
@@ -9,14 +9,14 @@ import * as os from 'os';
 import { configService } from './config_service';
 import { TIMING } from './constants';
 
-// Sentry DSN - 构建时通过 esbuild define 注入
+// Sentry DSN - Injected via esbuild define at build time
 const SENTRY_DSN = process.env.SENTRY_DSN || '';
 
 let telemetryEnabled = true;
 let extensionVersion = 'unknown';
 let verboseLogging = false;
 
-// 解析 DSN
+// Parse DSN
 interface SentryConfig {
     publicKey: string;
     host: string;
@@ -28,7 +28,7 @@ function parseDsn(dsn: string): SentryConfig | null {
         return null;
     }
     try {
-        // DSN 格式: https://<public_key>@<host>/<project_id>
+        // DSN format: https://<public_key>@<host>/<project_id>
         const url = new URL(dsn);
         const publicKey = url.username;
         const host = url.host;
@@ -42,17 +42,17 @@ function parseDsn(dsn: string): SentryConfig | null {
 const sentryConfig = parseDsn(SENTRY_DSN);
 
 /**
- * 初始化错误上报服务
+ * Initialize Error Reporter
  */
 export function initErrorReporter(version: string): void {
     extensionVersion = version;
     
-    // 检查用户是否禁用了遥测
+    // Check if user has disabled telemetry
     const config = vscode.workspace.getConfiguration('agCockpit');
     telemetryEnabled = config.get<boolean>('telemetryEnabled', true);
     verboseLogging = config.get<boolean>('telemetryDebug', false);
     
-    // 同时尊重 VS Code 的全局遥测设置
+    // Also respect VS Code global telemetry settings
     const vscodeConfig = vscode.workspace.getConfiguration('telemetry');
     const vscodeLevel = vscodeConfig.get<string>('telemetryLevel', 'all');
     if (vscodeLevel === 'off') {
@@ -79,28 +79,28 @@ export function initErrorReporter(version: string): void {
 }
 
 /**
- * 错误分类 - 帮助快速区分用户环境问题 vs 插件 Bug
+ * Error Classification - Helps quickly distinguish user environment issues vs extension bugs
  */
 type ErrorCategory = 
-    | 'network_timeout'      // 网络超时 - 用户环境
-    | 'connection_refused'   // 连接拒绝 - 服务未启动
-    | 'dns_failure'         // DNS 解析失败 - 网络问题
-    | 'proxy_error'         // 代理问题 - 用户环境
-    | 'permission_denied'   // 权限问题 - 用户环境
-    | 'cmd_timeout'         // 命令超时 - 系统卡顿
-    | 'parse_error'         // 解析错误 - 插件 Bug
-    | 'null_reference'      // 空引用 - 插件 Bug
-    | 'process_not_found'   // 进程未找到 - 用户环境
-    | 'unauthorized'        // 未登录 - 用户行为
-    | 'unknown';            // 未知
+    | 'network_timeout'      // Network Timeout - User Environment
+    | 'connection_refused'   // Connection Refused - Service Not Started
+    | 'dns_failure'         // DNS Failure - Network Problem
+    | 'proxy_error'         // Proxy Problem - User Environment
+    | 'permission_denied'   // Permission Problem - User Environment
+    | 'cmd_timeout'         // Command Timeout - System Lag
+    | 'parse_error'         // Parse Error - Extension Bug
+    | 'null_reference'      // Null Reference - Extension Bug
+    | 'process_not_found'   // Process Not Found - User Environment
+    | 'unauthorized'        // Not Logged In - User Action
+    | 'unknown';            // Unknown
 
 /**
- * 根据错误消息自动分类
+ * Auto-classify based on error message
  */
 function classifyError(error: Error): ErrorCategory {
     const msg = error.message.toLowerCase();
     
-    // 网络相关（用户环境）
+    // Network related (User Environment)
     if (msg.includes('etimedout') || msg.includes('timed out')) {
         return 'network_timeout';
     }
@@ -114,7 +114,7 @@ function classifyError(error: Error): ErrorCategory {
         return 'proxy_error';
     }
     
-    // 权限/系统相关（用户环境）
+    // Permission/System related (User Environment)
     if (msg.includes('permission') || msg.includes('access denied') || msg.includes('eacces')) {
         return 'permission_denied';
     }
@@ -128,7 +128,7 @@ function classifyError(error: Error): ErrorCategory {
         return 'unauthorized';
     }
     
-    // 代码问题（插件 Bug）
+    // Code issue (Extension Bug)
     if (msg.includes('json') || msg.includes('parse') || msg.includes('unexpected token')) {
         return 'parse_error';
     }
@@ -140,7 +140,7 @@ function classifyError(error: Error): ErrorCategory {
 }
 
 /**
- * 获取代理配置状态
+ * Get proxy configuration status
  */
 export function getProxyStatus(): { configured: boolean; type: string } {
     try {
@@ -150,7 +150,7 @@ export function getProxyStatus(): { configured: boolean; type: string } {
             return { configured: true, type: 'http.proxy' };
         }
         
-        // 检查环境变量
+        // Check environment variables
         if (process.env.HTTP_PROXY || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.https_proxy) {
             return { configured: true, type: 'env_var' };
         }
@@ -162,7 +162,7 @@ export function getProxyStatus(): { configured: boolean; type: string } {
 }
 
 /**
- * 构建 Sentry 事件 - 包含增强的诊断信息
+ * Build Sentry Event - Contains enhanced diagnostic info
  */
 function buildEvent(error: Error, context?: Record<string, unknown>): object {
     const errorCategory = classifyError(error);
@@ -172,7 +172,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
     const runtimeContext = getRuntimeContext();
     const uiKindLabel = getUiKindLabel(vscode.env.uiKind);
     
-    // 判断是否可能是用户环境问题
+    // Determine if likely a user environment issue
     const likelyUserEnvIssue = [
         'network_timeout', 'connection_refused', 'dns_failure', 
         'proxy_error', 'permission_denied', 'cmd_timeout', 'process_not_found',
@@ -186,7 +186,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
         level: 'error',
         release: `antigravity-cockpit@${extensionVersion}`,
         environment: 'production',
-        // 标签 - 用于 Sentry 筛选和分组
+        // Tags - For Sentry filtering and grouping
         tags: {
             error_category: errorCategory,
             likely_user_env: likelyUserEnvIssue ? 'yes' : 'no',
@@ -198,7 +198,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
             remote_name: vscode.env.remoteName ?? 'local',
             ...(context && (context as { test_event?: boolean }).test_event ? { test_event: 'yes' } : {}),
         },
-        // 上下文 - 详细诊断信息
+        // Contexts - Detailed diagnostic info
         contexts: {
             os: {
                 name: os.platform(),
@@ -216,7 +216,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
                 proxy_status: proxyStatus,
                 node_version: process.version,
                 arch: os.arch(),
-                raw_stack: error.stack,  // 原始堆栈，方便人眼阅读
+                raw_stack: error.stack,  // Raw stack for human readability
             },
             ...(appContext ? { app: appContext } : {}),
             ...(runtimeContext ? { runtime: runtimeContext } : {}),
@@ -234,7 +234,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
 }
 
 /**
- * 生成事件 ID
+ * Generate Event ID
  */
 function generateEventId(): string {
     return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -245,7 +245,7 @@ function generateEventId(): string {
 }
 
 /**
- * 解析堆栈
+ * Parse Stacktrace
  */
 function parseStacktrace(stack?: string): object | undefined {
     if (!stack) {
@@ -253,7 +253,7 @@ function parseStacktrace(stack?: string): object | undefined {
     }
     
     const frames = stack.split('\n')
-        .slice(1) // 跳过第一行（错误消息）
+        .slice(1) // Skip first line (error message)
         .map(line => {
             const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/);
             if (match) {
@@ -267,13 +267,13 @@ function parseStacktrace(stack?: string): object | undefined {
             return null;
         })
         .filter(Boolean)
-        .reverse(); // Sentry 期望最新的帧在最后
+        .reverse(); // Sentry expects newest frame last
     
     return frames.length > 0 ? { frames } : undefined;
 }
 
 /**
- * 发送事件到 Sentry
+ * Send event to Sentry
  */
 function sendEvent(event: object): void {
     if (!sentryConfig) {
@@ -311,7 +311,7 @@ function sendEvent(event: object): void {
         if (verboseLogging) {
             console.log(`[ErrorReporter] Send failed: ${err.message}`);
         }
-        // 静默失败，不影响主程序
+        // Silently fail, do not affect main program
     });
 
     req.on('timeout', () => {
@@ -326,7 +326,7 @@ function sendEvent(event: object): void {
 }
 
 /**
- * 上报错误
+ * Capture Error
  */
 export function captureError(error: Error, context?: Record<string, unknown>): void {
     if (!telemetryEnabled || !sentryConfig) {
@@ -343,12 +343,12 @@ export function captureError(error: Error, context?: Record<string, unknown>): v
         }
         sendEvent(event);
     } catch {
-        // 静默失败
+        // Silently fail
     }
 }
 
 /**
- * 上报消息
+ * Capture Message
  */
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
     if (!telemetryEnabled || !sentryConfig) {
@@ -374,22 +374,22 @@ export function captureMessage(message: string, level: 'info' | 'warning' | 'err
         }
         sendEvent(event);
     } catch {
-        // 静默失败
+        // Silently fail
     }
 }
 
 /**
- * 获取匿名用户信息（用于 Sentry Users 统计）
+ * Get Anonymous User Info (For Sentry Users Stats)
  */
 function getUserContext(): { id?: string; session_id?: string } | undefined {
     const user: { id?: string; session_id?: string } = {};
 
-    // machineId 是 VS Code 提供的匿名稳定标识
+    // machineId is anonymous stable ID provided by VS Code
     if (vscode.env.machineId) {
         user.id = vscode.env.machineId;
     }
 
-    // sessionId 是临时会话标识
+    // sessionId is temporary session ID
     if (vscode.env.sessionId) {
         user.session_id = vscode.env.sessionId;
     }
@@ -398,7 +398,7 @@ function getUserContext(): { id?: string; session_id?: string } | undefined {
 }
 
 /**
- * 获取配置上下文（不包含敏感内容）
+ * Get App Context (No sensitive content)
  */
 function getAppContext(): {
     refresh_interval_sec: number;
@@ -436,7 +436,7 @@ function getAppContext(): {
 }
 
 /**
- * 获取运行时常量上下文
+ * Get Runtime Constants Context
  */
 function getRuntimeContext(): {
     http_timeout_ms: number;
@@ -453,7 +453,7 @@ function getRuntimeContext(): {
 }
 
 /**
- * 获取 UI 类型标签
+ * Get UI Kind Label
  */
 function getUiKindLabel(kind: vscode.UIKind | undefined): string {
     if (kind === vscode.UIKind.Web) {
@@ -466,9 +466,9 @@ function getUiKindLabel(kind: vscode.UIKind | undefined): string {
 }
 
 /**
- * 刷新待发送的事件（兼容接口，轻量版不需要）
+ * Flush pending events (Compatible interface, lightweight version does not need it)
  */
 export async function flushEvents(): Promise<void> {
-    // 轻量版使用异步请求，不需要等待
+    // Lightweight version uses async request, no need to wait
     return Promise.resolve();
 }

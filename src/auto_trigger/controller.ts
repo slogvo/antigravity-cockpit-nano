@@ -1,7 +1,7 @@
 /**
  * Antigravity Cockpit - Auto Trigger Controller
- * 自动触发功能的主控制器
- * 整合 OAuth、调度器、触发器，提供统一的接口
+ * Main Controller for Auto Trigger Functionality
+ * Integrates OAuth, Scheduler, Trigger, providing a unified interface
  */
 
 import * as vscode from 'vscode';
@@ -18,21 +18,21 @@ import {
 import { logger } from '../shared/log_service';
 import { t } from '../shared/i18n';
 
-// 存储键
+// Storage Key
 const SCHEDULE_CONFIG_KEY = 'scheduleConfig';
 
 /**
- * 自动触发控制器
+ * Auto Trigger Controller
  */
 class AutoTriggerController {
     private initialized = false;
     private messageHandler?: (message: AutoTriggerMessage) => void;
-    /** 配额中显示的模型常量列表，用于过滤可用模型 */
+    /** List of model constants displayed in quota, used to filter available models */
     private quotaModelConstants: string[] = [];
 
 
     /**
-     * 设置配额模型常量列表（从 Dashboard 的配额数据中获取）
+     * Set quota model constant list (retrieved from Dashboard quota data)
      */
     setQuotaModels(modelConstants: string[]): void {
         this.quotaModelConstants = modelConstants;
@@ -40,20 +40,20 @@ class AutoTriggerController {
     }
 
     /**
-     * 初始化控制器
+     * Initialize Controller
      */
     async initialize(context: vscode.ExtensionContext): Promise<void> {
         if (this.initialized) {
             return;
         }
 
-        // 初始化凭证存储
+        // Initialize Credential Storage
         credentialStorage.initialize(context);
 
-        // 初始化触发服务（加载历史记录）
+        // Initialize Trigger Service (Load History)
         triggerService.initialize();
 
-        // 恢复调度配置
+        // Restore Schedule Configuration
         const savedConfig = credentialStorage.getState<ScheduleConfig | null>(SCHEDULE_CONFIG_KEY, null);
         if (savedConfig && savedConfig.enabled) {
             logger.info('[AutoTriggerController] Restoring schedule from saved config');
@@ -65,14 +65,14 @@ class AutoTriggerController {
     }
 
     /**
-     * 更新状态栏显示（已整合到主配额悬浮提示中，此方法现为空操作）
+     * Update Status Bar Display (Integrated into main quota tooltip, this method is now a no-op)
      */
     private async updateStatusBar(): Promise<void> {
-        // 下次触发时间现在显示在主配额悬浮提示中，不再需要单独的状态栏
+        // Next trigger time is now displayed in the main quota tooltip, no separate status bar needed
     }
 
     /**
-     * 获取当前状态
+     * Get Current State
      */
     async getState(): Promise<AutoTriggerState> {
         const authorization = await credentialStorage.getAuthorizationStatus();
@@ -84,7 +84,7 @@ class AutoTriggerController {
         });
 
         const nextRunTime = schedulerService.getNextRunTime();
-        // 传入配额模型常量进行过滤
+        // Pass in quota model constants for filtering
         const availableModels = await triggerService.fetchAvailableModels(this.quotaModelConstants);
 
         return {
@@ -98,27 +98,27 @@ class AutoTriggerController {
     }
 
     /**
-     * 开始授权流程
+     * Start Authorization Process
      */
     async startAuthorization(): Promise<boolean> {
         return await oauthService.startAuthorization();
     }
 
     /**
-     * 开始授权流程（别名）
+     * Start Authorization Process (Alias)
      */
     async authorize(): Promise<boolean> {
         return this.startAuthorization();
     }
 
     /**
-     * 撤销授权
+     * Revoke Authorization
      */
     async revokeAuthorization(): Promise<void> {
         await oauthService.revokeAuthorization();
-        // 停止调度器
+        // Stop Scheduler
         schedulerService.stop();
-        // 禁用调度
+        // Disable Schedule
         const schedule = credentialStorage.getState<ScheduleConfig>(SCHEDULE_CONFIG_KEY, {
             enabled: false,
             repeatMode: 'daily',
@@ -130,25 +130,25 @@ class AutoTriggerController {
     }
 
     /**
-     * 保存调度配置
+     * Save Schedule Configuration
      */
     async saveSchedule(config: ScheduleConfig): Promise<void> {
-        // 验证配置
+        // Validate Configuration
         if (config.crontab) {
             const result = schedulerService.validateCrontab(config.crontab);
             if (!result.valid) {
-                throw new Error(`无效的 crontab 表达式: ${result.error}`);
+                throw new Error(`Invalid crontab expression: ${result.error}`);
             }
         }
 
-        // 保存配置
+        // Save Configuration
         await credentialStorage.saveState(SCHEDULE_CONFIG_KEY, config);
 
-        // 更新调度器
+        // Update Scheduler
         if (config.enabled) {
             const hasAuth = await credentialStorage.hasValidCredential();
             if (!hasAuth) {
-                throw new Error('请先完成授权');
+                throw new Error('Please complete authorization first');
             }
             schedulerService.setSchedule(config, () => this.executeTrigger());
         } else {
@@ -160,19 +160,19 @@ class AutoTriggerController {
     }
 
     /**
-     * 手动触发一次
-     * @param models 可选的自定义模型列表
+     * Trigger Once Manually
+     * @param models Optional custom model list
      */
     async testTrigger(models?: string[]): Promise<void> {
         const hasAuth = await credentialStorage.hasValidCredential();
         if (!hasAuth) {
-            vscode.window.showErrorMessage('请先完成授权');
+            vscode.window.showErrorMessage('Please complete authorization first');
             return;
         }
 
-        vscode.window.showInformationMessage('⏳ 正在发送触发请求...');
+        vscode.window.showInformationMessage('⏳ Sending trigger request...');
         
-        // 如果传入了自定义模型列表，使用自定义的；否则使用配置中的
+        // If custom model list is provided, use it; otherwise use configuration
         let selectedModels = models;
         if (!selectedModels || selectedModels.length === 0) {
             const schedule = credentialStorage.getState<ScheduleConfig>(SCHEDULE_CONFIG_KEY, {
@@ -186,26 +186,26 @@ class AutoTriggerController {
         const result = await triggerService.trigger(selectedModels, 'manual');
 
         if (result.success) {
-            vscode.window.showInformationMessage(`✅ 触发成功！耗时 ${result.duration}ms`);
+            vscode.window.showInformationMessage(`✅ Trigger Successful! Duration ${result.duration}ms`);
         } else {
-            vscode.window.showErrorMessage(`❌ 触发失败: ${result.message}`);
+            vscode.window.showErrorMessage(`❌ Trigger Failed: ${result.message}`);
         }
 
-        // 通知 UI 更新
+        // Notify UI Update
         this.notifyStateUpdate();
     }
 
     /**
-     * 立即触发（别名，返回结果）
-     * @param models 可选的自定义模型列表，如果不传则使用配置中的模型
+     * Trigger Now (Alias, returns result)
+     * @param models Optional custom model list, defaults to configured models if not provided
      */
     async triggerNow(models?: string[]): Promise<{ success: boolean; duration?: number; error?: string; response?: string }> {
         const hasAuth = await credentialStorage.hasValidCredential();
         if (!hasAuth) {
-            return { success: false, error: '请先完成授权' };
+            return { success: false, error: 'Please complete authorization first' };
         }
 
-        // 如果传入了自定义模型列表，使用自定义的；否则使用配置中的
+        // If custom model list is provided, use it; otherwise use configuration
         let selectedModels = models;
         if (!selectedModels || selectedModels.length === 0) {
             const schedule = credentialStorage.getState<ScheduleConfig>(SCHEDULE_CONFIG_KEY, {
@@ -218,19 +218,19 @@ class AutoTriggerController {
 
         const result = await triggerService.trigger(selectedModels, 'manual');
 
-        // 通知 UI 更新
+        // Notify UI Update
         this.notifyStateUpdate();
 
         return {
             success: result.success,
             duration: result.duration,
             error: result.success ? undefined : result.message,
-            response: result.success ? result.message : undefined,  // AI 回复内容
+            response: result.success ? result.message : undefined,  // AI Response Content
         };
     }
 
     /**
-     * 清空历史记录
+     * Clear History
      */
     async clearHistory(): Promise<void> {
         triggerService.clearHistory();
@@ -238,7 +238,7 @@ class AutoTriggerController {
     }
 
     /**
-     * 执行触发（由调度器调用）
+     * Execute Trigger (Called by Scheduler)
      */
     private async executeTrigger(): Promise<void> {
         const schedule = credentialStorage.getState<ScheduleConfig>(SCHEDULE_CONFIG_KEY, {
@@ -254,33 +254,33 @@ class AutoTriggerController {
             logger.error(`[AutoTriggerController] Scheduled trigger failed: ${result.message}`);
         }
 
-        // 通知 UI 更新
+        // Notify UI Update
         this.notifyStateUpdate();
     }
 
     /**
-     * 获取调度描述
+     * Get Schedule Description
      */
     describeSchedule(config: ScheduleConfig): string {
         return schedulerService.describeSchedule(config);
     }
 
     /**
-     * 获取预设模板
+     * Get Presets
      */
     getPresets(): typeof SCHEDULE_PRESETS {
         return SCHEDULE_PRESETS;
     }
 
     /**
-     * 将配置转换为 crontab
+     * Convert Configuration to Crontab
      */
     configToCrontab(config: ScheduleConfig): string {
         return schedulerService.configToCrontab(config);
     }
 
     /**
-     * 验证 crontab
+     * Validate Crontab
      */
     validateCrontab(crontab: string): { valid: boolean; description?: string; error?: string } {
         const result = CronParser.parse(crontab);
@@ -292,7 +292,7 @@ class AutoTriggerController {
     }
 
     /**
-     * 获取下次运行时间的格式化字符串
+     * Get Formatted Next Run Time String
      */
     getNextRunTimeFormatted(): string | null {
         const nextRun = schedulerService.getNextRunTime();
@@ -307,19 +307,19 @@ class AutoTriggerController {
             return null;
         }
 
-        // 如果是今天，显示时间
+        // If today, show time
         if (nextRun.toDateString() === now.toDateString()) {
             return nextRun.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
         }
 
-        // 如果是明天，显示 "明天 HH:MM"
+        // If tomorrow, show "Tomorrow HH:MM"
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
         if (nextRun.toDateString() === tomorrow.toDateString()) {
-            return `明天 ${nextRun.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+            return `Tomorrow ${nextRun.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
         }
 
-        // 其他情况显示日期和时间
+        // Otherwise show date and time
         return nextRun.toLocaleString(undefined, {
             month: 'short',
             day: 'numeric',
@@ -329,7 +329,7 @@ class AutoTriggerController {
     }
 
     /**
-     * 处理来自 Webview 的消息
+     * Handle Messages from Webview
      */
     async handleMessage(message: AutoTriggerMessage): Promise<void> {
         switch (message.type) {
@@ -367,17 +367,17 @@ class AutoTriggerController {
     }
 
     /**
-     * 设置消息处理器（用于向 Webview 发送更新）
+     * Set Message Handler (Used to send updates to Webview)
      */
     setMessageHandler(handler: (message: AutoTriggerMessage) => void): void {
         this.messageHandler = handler;
     }
 
     /**
-     * 通知状态更新
+     * Notify State Update
      */
     private async notifyStateUpdate(): Promise<void> {
-        // 更新状态栏
+        // Update Status Bar
         this.updateStatusBar();
         
         if (this.messageHandler) {
@@ -390,7 +390,7 @@ class AutoTriggerController {
     }
 
     /**
-     * 销毁控制器
+     * Dispose Controller
      */
     dispose(): void {
         schedulerService.stop();
@@ -398,5 +398,5 @@ class AutoTriggerController {
     }
 }
 
-// 导出单例
+// Export Singleton
 export const autoTriggerController = new AutoTriggerController();

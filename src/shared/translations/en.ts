@@ -14,7 +14,7 @@ export const en = {
     'statusBar.tooltip': 'Click to open Quota Monitor',
 
     // Dashboard
-    'dashboard.title': 'Antigravity Quota Monitor',
+    'dashboard.title': 'Nano Quota Monitor',
     'dashboard.connecting': 'Connecting...',
     'dashboard.offline': 'Systems Offline',
     'dashboard.offlineDesc': 'Could not detect Antigravity process. Please ensure Antigravity is running.',

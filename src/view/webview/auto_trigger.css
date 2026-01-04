@@ -1,6 +1,6 @@
 /**
  * Antigravity Cockpit - Auto Trigger Tab CSS
- * 自动触发功能的样式
+ * Auto Trigger Styles
  */
 
 /* ========================================
@@ -1272,7 +1272,7 @@
     cursor: not-allowed;
 }
 
-/* Crontab 互斥时的禁用样式 */
+/* Disabled style when Crontab is mutually exclusive */
 .at-disabled {
     opacity: 0.4;
     pointer-events: none;

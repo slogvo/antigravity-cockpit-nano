@@ -1,6 +1,6 @@
 /**
- * Antigravity Cockpit - HUD 视图
- * 负责创建和管理 Webview Dashboard
+ * Antigravity Cockpit - HUD View
+ * Responsible for creating and managing Webview Dashboard
  */
 
 import * as vscode from 'vscode';
@@ -12,8 +12,8 @@ import { configService } from '../shared/config_service';
 import { i18n, t } from '../shared/i18n';
 
 /**
- * CockpitHUD 类
- * 管理 Webview 面板的创建、更新和销毁
+ * CockpitHUD Class
+ * Manages creation, update, and disposal of Webview panels
  */
 export class CockpitHUD {
     public static readonly viewType = 'antigravity.cockpit';
@@ -30,9 +30,9 @@ export class CockpitHUD {
     }
 
     /**
-     * 显示 HUD 面板
-     * @param initialTab 可选的初始标签页 (如 'auto-trigger')
-     * @returns 是否成功打开
+     * Show HUD Panel
+     * @param initialTab Optional initial tab (e.g., 'auto-trigger')
+     * @returns Whether successfully opened
      */
     public async revealHud(initialTab?: string): Promise<boolean> {
         const column = vscode.window.activeTextEditor?.viewColumn;
@@ -41,7 +41,7 @@ export class CockpitHUD {
         if (existingPanel) {
             existingPanel.reveal(column);
             this.refreshWithCachedData();
-            // 如果指定了初始标签页，发送消息切换
+            // If initial tab is specified, send message to switch
             if (initialTab) {
                 setTimeout(() => {
                     existingPanel.webview.postMessage({ type: 'switchTab', tab: initialTab });
@@ -80,7 +80,7 @@ export class CockpitHUD {
                 this.refreshWithCachedData();
             }
 
-            // 如果指定了初始标签页，延迟发送消息切换
+            // If initial tab is specified, delay sending message to switch
             if (initialTab) {
                 setTimeout(() => {
                     panel.webview.postMessage({ type: 'switchTab', tab: initialTab });
@@ -96,7 +96,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 使用缓存数据刷新视图
+     * Refresh view with cached data
      */
     private refreshWithCachedData(): void {
         if (this.cachedTelemetry) {
@@ -126,21 +126,21 @@ export class CockpitHUD {
     }
 
     /**
-     * 从缓存恢复数据
+     * Rehydrate from cache
      */
     public rehydrate(): void {
         this.refreshWithCachedData();
     }
 
     /**
-     * 注册消息处理器
+     * Register message handler
      */
     public onSignal(handler: (message: WebviewMessage) => void): void {
         this.messageRouter = handler;
     }
 
     /**
-     * 向 Webview 发送消息
+     * Send message to Webview
      */
     public sendMessage(message: object): void {
         const panel = this.panels.get('main');
@@ -150,14 +150,14 @@ export class CockpitHUD {
     }
 
     /**
-     * 刷新视图
+     * Refresh view
      */
     public refreshView(snapshot: QuotaSnapshot, config: DashboardConfig): void {
         this.cachedTelemetry = snapshot;
         const panel = this.panels.get('main');
         
         if (panel) {
-            // 转换数据为 Webview 兼容格式
+            // Convert data to Webview compatible format
             const webviewData = this.convertToWebviewFormat(snapshot);
 
             panel.webview.postMessage({
@@ -169,7 +169,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 转换数据格式（驼峰转下划线，兼容 Webview JS）
+     * Convert data format (camelCase to snake_case, compatible with Webview JS)
      */
     private convertToWebviewFormat(snapshot: QuotaSnapshot): object {
         return {
@@ -227,7 +227,7 @@ export class CockpitHUD {
                 isExhausted: m.isExhausted,
                 timeUntilResetFormatted: m.timeUntilResetFormatted,
                 resetTimeDisplay: m.resetTimeDisplay,
-                // 模型能力字段
+                // Model capability fields
                 supportsImages: m.supportsImages,
                 isRecommended: m.isRecommended,
                 tagTitle: m.tagTitle,
@@ -243,7 +243,7 @@ export class CockpitHUD {
                 models: g.models.map(m => ({
                     label: m.label,
                     modelId: m.modelId,
-                    // 模型能力字段
+                    // Model capability fields
                     supportsImages: m.supportsImages,
                     isRecommended: m.isRecommended,
                     tagTitle: m.tagTitle,
@@ -254,7 +254,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 销毁所有面板
+     * Dispose all panels
      */
     public dispose(): void {
         this.panels.forEach(panel => panel.dispose());
@@ -262,7 +262,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 获取 Webview 资源 URI
+     * Get Webview resource URI
      */
     private getWebviewUri(webview: vscode.Webview, ...pathSegments: string[]): vscode.Uri {
         return webview.asWebviewUri(
@@ -271,7 +271,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 读取外部资源文件内容
+     * Read external resource file content
      */
     private readResourceFile(...pathSegments: string[]): string {
         try {
@@ -284,17 +284,17 @@ export class CockpitHUD {
     }
 
     /**
-     * 生成 HTML 内容
+     * Generate HTML content
      */
     private generateHtml(webview: vscode.Webview): string {
-        // 获取外部资源 URI
+        // Get external resource URIs
         const styleUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'dashboard.css');
         const listStyleUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'list_view.css');
         const autoTriggerStyleUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'auto_trigger.css');
         const scriptUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'dashboard.js');
         const autoTriggerScriptUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'auto_trigger.js');
 
-        // 获取国际化文本
+        // Get localized text
         const translations = i18n.getAllTranslations();
         const translationsJson = JSON.stringify(translations);
 
@@ -406,15 +406,15 @@ export class CockpitHUD {
                 <!-- Status Grid (hidden when unauthorized) -->
                 <div class="at-status-grid" id="at-status-grid">
                     <div class="at-status-item">
-                        <span class="at-label">⏰ ${t('autoTrigger.statusLabel') || '状态'}</span>
-                        <span class="at-value" id="at-status-value">${t('autoTrigger.disabled') || '未启用'}</span>
+                        <span class="at-label">⏰ ${t('autoTrigger.statusLabel') || 'Status'}</span>
+                        <span class="at-value" id="at-status-value">${t('autoTrigger.disabled') || 'Disabled'}</span>
                     </div>
                     <div class="at-status-item">
-                        <span class="at-label">📅 ${t('autoTrigger.modeLabel') || '模式'}</span>
+                        <span class="at-label">📅 ${t('autoTrigger.modeLabel') || 'Mode'}</span>
                         <span class="at-value" id="at-mode-value">--</span>
                     </div>
                     <div class="at-status-item">
-                        <span class="at-label">🤖 ${t('autoTrigger.modelsLabel') || '模型'}</span>
+                        <span class="at-label">🤖 ${t('autoTrigger.modelsLabel') || 'Models'}</span>
                         <span class="at-value" id="at-models-value">--</span>
                     </div>
                     <div class="at-status-item">
@@ -426,13 +426,13 @@ export class CockpitHUD {
                 <!-- Action Buttons -->
                 <div class="at-actions" id="at-actions">
                     <button id="at-config-btn" class="at-btn at-btn-secondary">
-                        ⚙️ ${t('autoTrigger.configBtn') || '配置调度'}
+                        ⚙️ ${t('autoTrigger.configBtn') || 'Configure'}
                     </button>
                     <button id="at-test-btn" class="at-btn at-btn-accent">
                         ${t('autoTrigger.testBtn')}
                     </button>
                     <button id="at-history-btn" class="at-btn at-btn-secondary">
-                        📜 ${t('autoTrigger.historyBtn') || '历史'} <span id="at-history-count">(0)</span>
+                        📜 ${t('autoTrigger.historyBtn') || 'History'} <span id="at-history-count">(0)</span>
                     </button>
                 </div>
             </div>
@@ -483,13 +483,13 @@ export class CockpitHUD {
                 <div id="at-config-weekly" class="at-mode-config hidden">
                     <label>${t('autoTrigger.selectDay')}</label>
                     <div class="at-day-grid" id="at-weekly-days">
-                        <div class="at-chip selected" data-day="1">一</div>
-                        <div class="at-chip selected" data-day="2">二</div>
-                        <div class="at-chip selected" data-day="3">三</div>
-                        <div class="at-chip selected" data-day="4">四</div>
-                        <div class="at-chip selected" data-day="5">五</div>
-                        <div class="at-chip" data-day="6">六</div>
-                        <div class="at-chip" data-day="0">日</div>
+                        <div class="at-chip selected" data-day="1">Mon</div>
+                        <div class="at-chip selected" data-day="2">Tue</div>
+                        <div class="at-chip selected" data-day="3">Wed</div>
+                        <div class="at-chip selected" data-day="4">Thu</div>
+                        <div class="at-chip selected" data-day="5">Fri</div>
+                        <div class="at-chip" data-day="6">Sat</div>
+                        <div class="at-chip" data-day="0">Sun</div>
                     </div>
                     <div class="at-quick-btns">
                         <button class="at-quick-btn" data-preset="workdays">${t('autoTrigger.workdays')}</button>
@@ -550,7 +550,7 @@ export class CockpitHUD {
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="at-config-cancel" class="btn-secondary">${t('customGrouping.cancel') || '取消'}</button>
+                <button id="at-config-cancel" class="btn-secondary">${t('customGrouping.cancel') || 'Cancel'}</button>
                 <button id="at-config-save" class="btn-primary">💾 ${t('autoTrigger.saveBtn')}</button>
             </div>
         </div>
@@ -570,8 +570,8 @@ export class CockpitHUD {
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="at-test-cancel" class="btn-secondary">${t('customGrouping.cancel') || '取消'}</button>
-                <button id="at-test-run" class="btn-primary">🚀 ${t('autoTrigger.triggerBtn') || '触发'}</button>
+                <button id="at-test-cancel" class="btn-secondary">${t('customGrouping.cancel') || 'Cancel'}</button>
+                <button id="at-test-run" class="btn-primary">🚀 ${t('autoTrigger.triggerBtn') || 'Trigger'}</button>
             </div>
         </div>
     </div>
@@ -598,15 +598,15 @@ export class CockpitHUD {
     <div id="at-revoke-modal" class="modal hidden">
         <div class="modal-content modal-content-small">
             <div class="modal-header">
-                <h3>⚠️ ${t('autoTrigger.revokeConfirmTitle') || '确认取消授权'}</h3>
+                <h3>⚠️ ${t('autoTrigger.revokeConfirmTitle') || 'Revoke Authorization'}</h3>
                 <button id="at-revoke-close" class="close-btn">×</button>
             </div>
             <div class="modal-body" style="text-align: center; padding: 20px;">
                 <p style="margin-bottom: 20px;">${t('autoTrigger.revokeConfirm')}</p>
             </div>
             <div class="modal-footer">
-                <button id="at-revoke-cancel" class="btn-secondary">${t('customGrouping.cancel') || '取消'}</button>
-                <button id="at-revoke-confirm" class="btn-primary" style="background: var(--vscode-errorForeground);">🗑️ ${t('autoTrigger.confirmRevoke') || '确认取消'}</button>
+                <button id="at-revoke-cancel" class="btn-secondary">${t('customGrouping.cancel') || 'Cancel'}</button>
+                <button id="at-revoke-confirm" class="btn-primary" style="background: var(--vscode-errorForeground);">🗑️ ${t('autoTrigger.confirmRevoke') || 'Confirm Revoke'}</button>
             </div>
         </div>
     </div>
@@ -620,7 +620,7 @@ export class CockpitHUD {
             <div class="modal-body">
                 <!-- Display Mode and View Mode moved to bottom -->
 
-                <!-- 状态栏样式选择 -->
+                <!-- Status bar style selection -->
                 <div class="setting-item">
                     <label for="statusbar-format">📊 ${i18n.t('statusBarFormat.title')}</label>
                     <select id="statusbar-format" class="setting-select">
@@ -663,7 +663,7 @@ export class CockpitHUD {
 
                 <hr class="setting-divider">
 
-                <!-- 视图模式选择 -->
+                <!-- View mode selection -->
                 <div class="setting-item">
                     <label for="view-mode-select">🎴 ${t('viewMode.title')}</label>
                     <select id="view-mode-select" class="setting-select">
@@ -672,7 +672,7 @@ export class CockpitHUD {
                     </select>
                 </div>
 
-                <!-- 显示模式切换 -->
+                <!-- Display mode toggle -->
                 <div class="setting-item">
                     <label for="display-mode-select">🖥️ ${t('displayMode.title') || 'Display Mode'}</label>
                     <select id="display-mode-select" class="setting-select">
@@ -794,13 +794,13 @@ export class CockpitHUD {
         <div class="footer-content">
             <span class="footer-text">${i18n.t('footer.enjoyingThis')}</span>
             <div class="footer-links">
-                <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit" target="_blank" class="footer-link star-link">
+                <a href="https://github.com/slogvo/antigravity-cockpit-nano" target="_blank" class="footer-link star-link">
                     ⭐ Star
                 </a>
-                <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit/issues" target="_blank" class="footer-link feedback-link">
+                <a href="https://github.com/slogvo/antigravity-cockpit-nano/issues" target="_blank" class="footer-link feedback-link">
                     💬 ${i18n.t('footer.feedback')}
                 </a>
-                <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit/blob/master/docs/DONATE.md" target="_blank" class="footer-link donate-link">
+                <a href="https://github.com/slogvo/antigravity-cockpit-nano/blob/master/docs/DONATE.md" target="_blank" class="footer-link donate-link">
                     ☕ ${i18n.t('footer.donate') || 'Donate'}
                 </a>
             </div>
@@ -808,7 +808,7 @@ export class CockpitHUD {
     </footer>
 
     <script nonce="${nonce}">
-        // 注入国际化文本
+        // Inject internationalization text
         window.__i18n = ${translationsJson};
         window.__autoTriggerI18n = ${translationsJson};
     </script>
@@ -819,7 +819,7 @@ export class CockpitHUD {
     }
 
     /**
-     * 生成随机 nonce
+     * Generate random nonce
      */
     private generateNonce(): string {
         const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -831,5 +831,5 @@ export class CockpitHUD {
     }
 }
 
-// 保持向后兼容的导出别名
+// Keep backward compatible export alias
 export { CockpitHUD as hud };

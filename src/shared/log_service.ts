@@ -1,12 +1,12 @@
 /**
- * Antigravity Cockpit - 日志服务
- * 支持配置化日志级别，输出到 VS Code OutputChannel
+ * Antigravity Cockpit - Logging Service
+ * Supports configurable log levels, outputs to VS Code OutputChannel
  */
 
 import * as vscode from 'vscode';
 import { LOG_LEVELS } from './constants';
 
-/** 日志级别枚举 */
+/** Log Level Enum */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -14,7 +14,7 @@ export enum LogLevel {
     ERROR = 3,
 }
 
-/** 日志级别字符串到枚举的映射 */
+/** Log Level String to Enum Mapping */
 const LOG_LEVEL_MAP: Record<string, LogLevel> = {
     [LOG_LEVELS.DEBUG]: LogLevel.DEBUG,
     [LOG_LEVELS.INFO]: LogLevel.INFO,
@@ -22,7 +22,7 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
     [LOG_LEVELS.ERROR]: LogLevel.ERROR,
 };
 
-/** 日志服务类 */
+/** Logging Service Class */
 class Logger {
     private outputChannel: vscode.OutputChannel | null = null;
     private logLevel: LogLevel = LogLevel.INFO;
@@ -30,7 +30,7 @@ class Logger {
     private configDisposable?: vscode.Disposable;
 
     /**
-     * 初始化日志频道
+     * Initialize Output Channel
      */
     init(): void {
         if (this.isInitialized) {
@@ -40,19 +40,19 @@ class Logger {
         this.outputChannel = vscode.window.createOutputChannel('Antigravity Cockpit');
         this.isInitialized = true;
 
-        // 监听配置变化（保存 Disposable 以便清理）
+        // Listen for configuration changes (save Disposable for cleanup)
         this.configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration('agCockpit.logLevel')) {
                 this.updateLogLevel();
             }
         });
 
-        // 初始化日志级别
+        // Initialize Log Level
         this.updateLogLevel();
     }
 
     /**
-     * 从配置更新日志级别
+     * Update log level from configuration
      */
     private updateLogLevel(): void {
         const config = vscode.workspace.getConfiguration('agCockpit');
@@ -61,21 +61,21 @@ class Logger {
     }
 
     /**
-     * 设置日志级别
+     * Set Log Level
      */
     setLevel(level: LogLevel): void {
         this.logLevel = level;
     }
 
     /**
-     * 获取当前日志级别
+     * Get Current Log Level
      */
     getLevel(): LogLevel {
         return this.logLevel;
     }
 
     /**
-     * 获取当前时间戳
+     * Get Current Timestamp
      */
     private getTimestamp(): string {
         const now = new Date();
@@ -83,7 +83,7 @@ class Logger {
     }
 
     /**
-     * 格式化日志消息
+     * Format Log Message
      */
     private formatMessage(level: string, message: string, ...args: unknown[]): string {
         const timestamp = this.getTimestamp();
@@ -110,7 +110,7 @@ class Logger {
     }
 
     /**
-     * 输出日志
+     * Output Log
      */
     private log(level: LogLevel, levelStr: string, message: string, ...args: unknown[]): void {
         if (level < this.logLevel) {
@@ -123,7 +123,7 @@ class Logger {
             this.outputChannel.appendLine(formatted);
         }
 
-        // 同时输出到控制台（开发者工具）
+        // Also output to console (Developer Tools)
         switch (level) {
             case LogLevel.DEBUG:
                 console.log(formatted);
@@ -141,56 +141,56 @@ class Logger {
     }
 
     /**
-     * 调试日志
+     * Debug Log
      */
     debug(message: string, ...args: unknown[]): void {
         this.log(LogLevel.DEBUG, 'DEBUG', message, ...args);
     }
 
     /**
-     * 信息日志
+     * Info Log
      */
     info(message: string, ...args: unknown[]): void {
         this.log(LogLevel.INFO, 'INFO', message, ...args);
     }
 
     /**
-     * 警告日志
+     * Warn Log
      */
     warn(message: string, ...args: unknown[]): void {
         this.log(LogLevel.WARN, 'WARN', message, ...args);
     }
 
     /**
-     * 错误日志
+     * Error Log
      */
     error(message: string, ...args: unknown[]): void {
         this.log(LogLevel.ERROR, 'ERROR', message, ...args);
     }
 
     /**
-     * 显示日志面板
+     * Show Output Panel
      */
     show(): void {
         this.outputChannel?.show();
     }
 
     /**
-     * 隐藏日志面板
+     * Hide Output Panel
      */
     hide(): void {
         this.outputChannel?.hide();
     }
 
     /**
-     * 清空日志
+     * Clear Logs
      */
     clear(): void {
         this.outputChannel?.clear();
     }
 
     /**
-     * 销毁日志频道
+     * Dispose Logging Service
      */
     dispose(): void {
         this.configDisposable?.dispose();
@@ -201,7 +201,7 @@ class Logger {
     }
 
     /**
-     * 分组日志开始
+     * Start Log Group
      */
     group(label: string): void {
         this.outputChannel?.appendLine(`\n${'='.repeat(50)}`);
@@ -210,12 +210,12 @@ class Logger {
     }
 
     /**
-     * 分组日志结束
+     * End Log Group
      */
     groupEnd(): void {
         this.outputChannel?.appendLine('-'.repeat(50) + '\n');
     }
 }
 
-// 导出单例
+// Export Singleton
 export const logger = new Logger();

@@ -23,7 +23,7 @@ export class StatusBarController {
     }
 
     public update(snapshot: QuotaSnapshot, config: CockpitConfig): void {
-        // 仅图标模式：直接显示 🚀
+        // Icon only mode: show 🚀 directly
         if (config.statusBarFormat === STATUS_BAR_FORMAT.ICON) {
             this.statusBarItem.text = '🚀';
             this.statusBarItem.backgroundColor = undefined;
@@ -34,30 +34,30 @@ export class StatusBarController {
         const statusTextParts: string[] = [];
         let minPercentage = 100;
 
-        // 检查是否启用分组显示
+        // Check if grouping display is enabled
         if (config.groupingEnabled && config.groupingShowInStatusBar && snapshot.groups && snapshot.groups.length > 0) {
-            // 获取置顶的分组
+            // Get pinned groups
             const monitoredGroups = snapshot.groups.filter(g =>
                 config.pinnedGroups.includes(g.groupId),
             );
 
             if (monitoredGroups.length > 0) {
-                // 对置顶分组按 config.groupOrder 排序
+                // Sort pinned groups by config.groupOrder
                 if (config.groupOrder.length > 0) {
                     monitoredGroups.sort((a, b) => {
                         const idxA = config.groupOrder.indexOf(a.groupId);
                         const idxB = config.groupOrder.indexOf(b.groupId);
-                        // 如果都在排序列表中，按列表顺序
+                        // If both are in sort list, follow list order
                         if (idxA !== -1 && idxB !== -1) { return idxA - idxB; }
-                        // 如果一个在列表一个不在，在列表的优先
+                        // If one is in list and one is not, list one comes first
                         if (idxA !== -1) { return -1; }
                         if (idxB !== -1) { return 1; }
-                        // 都不在，保持原序
+                        // Neither in list, keep original order
                         return 0;
                     });
                 }
 
-                // 显示置顶分组
+                // Show pinned groups
                 monitoredGroups.forEach(g => {
                     const pct = g.remainingPercentage;
                     const text = this.formatStatusBarText(g.groupName, pct, config.statusBarFormat, config);
@@ -67,7 +67,7 @@ export class StatusBarController {
                     }
                 });
             } else {
-                // 显示最低配额分组
+                // Show lowest quota group
                 let lowestPct = 100;
                 let lowestGroup = snapshot.groups[0];
 
@@ -84,7 +84,7 @@ export class StatusBarController {
                     if (text) {
                         statusTextParts.push(text);
                     } else {
-                        // 仅状态球或仅数字模式时，显示最低的
+                        // For dot-only or percent-only mode, show the lowest
                         const dot = this.getStatusIcon(lowestPct, config);
                         statusTextParts.push(config.statusBarFormat === STATUS_BAR_FORMAT.DOT ? dot : `${Math.floor(lowestPct)}%`);
                     }
@@ -92,8 +92,8 @@ export class StatusBarController {
                 }
             }
         } else {
-            // 原始逻辑：显示模型
-            // 获取置顶的模型
+            // Original logic: show models
+            // Get pinned models
             const monitoredModels = snapshot.models.filter(m =>
                 config.pinnedModels.some(p =>
                     p.toLowerCase() === m.modelId.toLowerCase() ||
@@ -102,7 +102,7 @@ export class StatusBarController {
             );
 
             if (monitoredModels.length > 0) {
-                // 对置顶模型按 config.modelOrder 排序
+                // Sort pinned models by config.modelOrder
                 if (config.modelOrder.length > 0) {
                     monitoredModels.sort((a, b) => {
                         const idxA = config.modelOrder.indexOf(a.modelId);
@@ -114,10 +114,10 @@ export class StatusBarController {
                     });
                 }
 
-                // 显示置顶模型
+                // Show pinned models
                 monitoredModels.forEach(m => {
                     const pct = m.remainingPercentage ?? 0;
-                    // 使用自定义名称（如果存在）
+                    // Use custom name (if exists)
                     const displayName = config.modelCustomNames?.[m.modelId] || m.label;
                     const text = this.formatStatusBarText(displayName, pct, config.statusBarFormat, config);
                     if (text) { statusTextParts.push(text); }
@@ -126,7 +126,7 @@ export class StatusBarController {
                     }
                 });
             } else {
-                // 显示最低配额模型
+                // Show lowest quota model
                 let lowestPct = 100;
                 let lowestModel = snapshot.models[0];
 
@@ -139,13 +139,13 @@ export class StatusBarController {
                 });
 
                 if (lowestModel) {
-                    // 使用自定义名称（如果存在）
+                    // Use custom name (if exists)
                     const displayName = config.modelCustomNames?.[lowestModel.modelId] || lowestModel.label;
                     const text = this.formatStatusBarText(displayName, lowestPct, config.statusBarFormat, config);
                     if (text) {
                         statusTextParts.push(text);
                     } else {
-                        // 仅状态球或仅数字模式时，显示最低的
+                        // For dot-only or percent-only mode, show the lowest
                         const dot = this.getStatusIcon(lowestPct, config);
                         statusTextParts.push(config.statusBarFormat === STATUS_BAR_FORMAT.DOT ? dot : `${Math.floor(lowestPct)}%`);
                     }
@@ -154,17 +154,17 @@ export class StatusBarController {
             }
         }
 
-        // 更新状态栏
+        // Update status bar
         if (statusTextParts.length > 0) {
             this.statusBarItem.text = statusTextParts.join(' | ');
         } else {
             this.statusBarItem.text = '🟢';
         }
 
-        // 移除背景色，改用每个项目前的颜色球区分
+        // Remove background color, use color dots before each item to distinguish
         this.statusBarItem.backgroundColor = undefined;
 
-        // 更新悬浮提示 - 卡片式布局显示配额详情
+        // Update tooltip - Card layout shows quota details
         this.statusBarItem.tooltip = this.generateQuotaTooltip(snapshot, config);
     }
 
@@ -199,14 +199,14 @@ export class StatusBarController {
         md.isTrusted = true;
         md.supportHtml = true;
 
-        // 标题行（使用 tier 显示 userTier.name，与计划详情卡片保持一致）
+        // Title row (Use tier to show userTier.name, consistent with plan details card)
         const planInfo = snapshot.userInfo?.tier ? ` | ${snapshot.userInfo.tier}` : '';
         md.appendMarkdown(`**🚀 ${t('dashboard.title')}${planInfo}**\n\n`);
 
-        // 排序逻辑与仪表盘保持一致
+        // Sorting logic consistent with dashboard
         const sortedModels = [...snapshot.models];
         if (config.modelOrder && config.modelOrder.length > 0) {
-            // 有自定义顺序时，按用户拖拽设置的顺序排序
+            // Sort by user drag order if custom order exists
             const orderMap = new Map<string, number>();
             config.modelOrder.forEach((id, index) => orderMap.set(id, index));
             sortedModels.sort((a, b) => {
@@ -215,9 +215,9 @@ export class StatusBarController {
                 return idxA - idxB;
             });
         }
-        // 没有自定义顺序时，保持 API 返回的原始顺序
+        // Keep original API order if no custom order
 
-        // 构建 Markdown 表格
+        // Build Markdown table
         md.appendMarkdown('| | | |\n');
         md.appendMarkdown('| :--- | :--- | :--- |\n');
 
@@ -227,18 +227,18 @@ export class StatusBarController {
             const bar = this.generateCompactProgressBar(pct);
             const resetTime = model.timeUntilResetFormatted || '-';
 
-            // 使用完整模型名称
+            // Use full model name
             const pctDisplay = (Math.floor(pct * 100) / 100).toFixed(2);
             md.appendMarkdown(`| ${icon} **${model.label}** | \`${bar}\` | ${pctDisplay}% → ${resetTime} |\n`);
         }
 
-        // 自动唤醒下次触发时间
+        // Auto trigger next run time
         const nextTriggerTime = autoTriggerController.getNextRunTimeFormatted();
         if (nextTriggerTime) {
             md.appendMarkdown(`\n---\n⏰ **${t('autoTrigger.nextTrigger')}**: ${nextTriggerTime}\n`);
         }
 
-        // 底部提示
+        // Footer hint
         md.appendMarkdown(`\n---\n*${t('statusBar.tooltip')}*`);
 
         return md;
@@ -248,8 +248,8 @@ export class StatusBarController {
         const total = 10;
         const filled = Math.round((percentage / 100) * total);
         const empty = total - filled;
-        // 使用 ■ (U+25A0) 和 □ (U+25A1) 在 Windows UI 字体下通常宽度一致
-        // 之前的 █ (Full Block) 和 ░ (Light Shade) 在非等宽字体下宽度差异巨大
+        // Use ■ (U+25A0) and □ (U+25A1) which usually have consistent width in Windows UI fonts
+        // Previous █ (Full Block) and ░ (Light Shade) had huge width difference in non-monospace fonts
         return '■'.repeat(filled) + '□'.repeat(empty);
     }
 
@@ -257,9 +257,9 @@ export class StatusBarController {
         const warningThreshold = config?.warningThreshold ?? QUOTA_THRESHOLDS.WARNING_DEFAULT;
         const criticalThreshold = config?.criticalThreshold ?? QUOTA_THRESHOLDS.CRITICAL_DEFAULT;
 
-        if (percentage <= criticalThreshold) { return '🔴'; }  // 危险
-        if (percentage <= warningThreshold) { return '🟡'; }    // 警告
-        return '🟢'; // 健康
+        if (percentage <= criticalThreshold) { return '🔴'; }  // Critical
+        if (percentage <= warningThreshold) { return '🟡'; }    // Warning
+        return '🟢'; // Healthy
     }
 
     private formatStatusBarText(label: string, percentage: number, format: string, config?: CockpitConfig): string {
@@ -268,23 +268,23 @@ export class StatusBarController {
 
         switch (format) {
             case STATUS_BAR_FORMAT.ICON:
-                // 仅图标模式：返回空字符串，由 update 统一处理显示🚀
+                // Icon only mode: return empty string, update handles displaying 🚀 uniformly
                 return '';
             case STATUS_BAR_FORMAT.DOT:
-                // 仅状态球模式
+                // Dot only mode
                 return dot;
             case STATUS_BAR_FORMAT.PERCENT:
-                // 仅数字模式
+                // Percent only mode
                 return pct;
             case STATUS_BAR_FORMAT.COMPACT:
-                // 状态球 + 数字
+                // Dot + Percent
                 return `${dot} ${pct}`;
             case STATUS_BAR_FORMAT.NAME_PERCENT:
-                // 模型名 + 数字（无状态球）
+                // Name + Percent (No dot)
                 return `${label}: ${pct}`;
             case STATUS_BAR_FORMAT.STANDARD:
             default:
-                // 状态球 + 模型名 + 数字（默认）
+                // Dot + Name + Percent (Default)
                 return `${dot} ${label}: ${pct}`;
         }
     }

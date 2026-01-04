@@ -1,7 +1,7 @@
 /**
  * Antigravity Cockpit - Credential Storage
- * OAuth 凭证的安全存储服务
- * 使用 VS Code 的 SecretStorage API 安全存储敏感信息
+ * Secure storage service for OAuth credentials
+ * Uses VS Code's SecretStorage API to securely store sensitive information
  */
 
 import * as vscode from 'vscode';
@@ -11,18 +11,18 @@ import { logger } from '../shared/log_service';
 const CREDENTIAL_KEY = 'antigravity.autoTrigger.credential';
 const STATE_KEY = 'antigravity.autoTrigger.state';
 
-/**
- * 凭证存储服务
- * 单例模式，通过 initialize() 初始化
- */
+    /**
+     * Credential Storage Service
+     * Singleton pattern, initialized via initialize()
+     */
 class CredentialStorage {
     private secretStorage?: vscode.SecretStorage;
     private globalState?: vscode.Memento;
     private initialized = false;
 
     /**
-     * 初始化存储服务
-     * @param context VS Code 扩展上下文
+     * Initialize Storage Service
+     * @param context VS Code Extension Context
      */
     initialize(context: vscode.ExtensionContext): void {
         this.secretStorage = context.secrets;
@@ -32,7 +32,7 @@ class CredentialStorage {
     }
 
     /**
-     * 检查是否已初始化
+     * Check if Initialized
      */
     private ensureInitialized(): void {
         if (!this.initialized || !this.secretStorage || !this.globalState) {
@@ -41,7 +41,7 @@ class CredentialStorage {
     }
 
     /**
-     * 保存 OAuth 凭证
+     * Save OAuth Credential
      */
     async saveCredential(credential: OAuthCredential): Promise<void> {
         this.ensureInitialized();
@@ -57,7 +57,7 @@ class CredentialStorage {
     }
 
     /**
-     * 获取 OAuth 凭证
+     * Get OAuth Credential
      */
     async getCredential(): Promise<OAuthCredential | null> {
         this.ensureInitialized();
@@ -75,7 +75,7 @@ class CredentialStorage {
     }
 
     /**
-     * 删除 OAuth 凭证
+     * Delete OAuth Credential
      */
     async deleteCredential(): Promise<void> {
         this.ensureInitialized();
@@ -90,7 +90,7 @@ class CredentialStorage {
     }
 
     /**
-     * 检查是否有有效凭证
+     * Check for Valid Credential
      */
     async hasValidCredential(): Promise<boolean> {
         const credential = await this.getCredential();
@@ -98,7 +98,7 @@ class CredentialStorage {
             return false;
         }
 
-        // 检查是否有 refresh_token（有 refresh_token 就可以刷新 access_token）
+        // Check if refresh_token exists (can refresh access_token with refresh_token)
         if (!credential.refreshToken) {
             return false;
         }
@@ -107,7 +107,7 @@ class CredentialStorage {
     }
 
     /**
-     * 获取授权状态
+     * Get Authorization Status
      */
     async getAuthorizationStatus(): Promise<AuthorizationStatus> {
         const credential = await this.getCredential();
@@ -126,7 +126,7 @@ class CredentialStorage {
     }
 
     /**
-     * 更新 access_token（刷新后调用）
+     * Update access_token (Called after refresh)
      */
     async updateAccessToken(accessToken: string, expiresAt: string): Promise<void> {
         const credential = await this.getCredential();
@@ -141,7 +141,7 @@ class CredentialStorage {
     }
 
     /**
-     * 保存通用状态数据（非敏感）
+     * Save General State Data (Non-sensitive)
      */
     async saveState<T>(key: string, value: T): Promise<void> {
         this.ensureInitialized();
@@ -149,7 +149,7 @@ class CredentialStorage {
     }
 
     /**
-     * 获取通用状态数据
+     * Get General State Data
      */
     getState<T>(key: string, defaultValue: T): T {
         this.ensureInitialized();
@@ -157,5 +157,5 @@ class CredentialStorage {
     }
 }
 
-// 导出单例
+// Export Singleton
 export const credentialStorage = new CredentialStorage();

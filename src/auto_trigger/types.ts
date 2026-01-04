@@ -1,24 +1,24 @@
 /**
  * Antigravity Cockpit - Auto Trigger Types
- * 自动触发功能的类型定义
+ * Auto Trigger Type Definitions
  */
 
 /**
- * OAuth 凭证数据
+ * OAuth Credential Data
  */
 export interface OAuthCredential {
     clientId: string;
     clientSecret: string;
     accessToken: string;
     refreshToken: string;
-    expiresAt: string;  // ISO 8601 格式
+    expiresAt: string;  // ISO 8601 format
     projectId?: string;
     scopes: string[];
     email?: string;
 }
 
 /**
- * 授权状态
+ * Authorization Status
  */
 export interface AuthorizationStatus {
     isAuthorized: boolean;
@@ -28,80 +28,80 @@ export interface AuthorizationStatus {
 }
 
 /**
- * 调度重复模式
+ * Schedule Repeat Mode
  */
 export type ScheduleRepeatMode = 'daily' | 'weekly' | 'interval';
 
 /**
- * 星期几
+ * Day of Week
  */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;  // 0 = Sunday
 
 /**
- * 调度配置
+ * Schedule Configuration
  */
 export interface ScheduleConfig {
     enabled: boolean;
     repeatMode: ScheduleRepeatMode;
     
-    // 每天模式
+    // Daily Mode
     dailyTimes?: string[];  // ["07:00", "12:00", "17:00"]
     
-    // 每周模式
-    weeklyDays?: number[];  // [1, 2, 3, 4, 5] = 工作日 (0 = Sunday)
+    // Weekly Mode
+    weeklyDays?: number[];  // [1, 2, 3, 4, 5] = Weekdays (0 = Sunday)
     weeklyTimes?: string[];
     
-    // 间隔模式
+    // Interval Mode
     intervalHours?: number;
     intervalStartTime?: string;  // "07:00"
-    intervalEndTime?: string;    // "22:00" (可选，不填则全天)
+    intervalEndTime?: string;    // "22:00" (Optional, whole day if omitted)
     
-    // 高级: 原始 crontab 表达式
+    // Advanced: Raw crontab expression
     crontab?: string;
     
-    /** 选中的模型列表 (用于触发) */
+    /** Selected model list (for triggering) */
     selectedModels: string[];
 }
 
 /**
- * 触发记录
+ * Trigger Record
  */
 export interface TriggerRecord {
     timestamp: string;  // ISO 8601
     success: boolean;
-    prompt?: string;    // 发送的请求内容
-    message?: string;   // AI 的回复
+    prompt?: string;    // Request content sent
+    message?: string;   // AI Reply
     duration?: number;  // ms
-    triggerType?: 'manual' | 'auto'; // 触发类型：手动测试 | 自动触发
+    triggerType?: 'manual' | 'auto'; // Trigger type: Manual Test | Auto Trigger
 }
 
 /**
- * 模型信息（用于自动触发）
+ * Model Information (for auto-trigger)
  */
 export interface ModelInfo {
-    /** 模型 ID (用于 API 调用，如 gemini-3-pro-high) */
+    /** Model ID (for API calls, e.g. gemini-3-pro-high) */
     id: string;
-    /** 显示名称 (如 Gemini 3 Pro (High)) */
+    /** Display Name (e.g. Gemini 3 Pro (High)) */
     displayName: string;
-    /** 模型常量 (用于与配额匹配，如 MODEL_PLACEHOLDER_M8) */
+    /** Model Constant (for quota matching, e.g. MODEL_PLACEHOLDER_M8) */
     modelConstant: string;
 }
 
 /**
- * 自动触发状态
+ * Auto Trigger State
  */
 export interface AutoTriggerState {
     authorization: AuthorizationStatus;
     schedule: ScheduleConfig;
     lastTrigger?: TriggerRecord;
-    recentTriggers: TriggerRecord[];  // 最近 10 条
+    recentTriggers: TriggerRecord[];  // Recent 10 records
     nextTriggerTime?: string;  // ISO 8601
-    /** 可选的模型列表（已过滤，只包含配额中显示的模型） */
+    /** Available model list (Filtered, contains only models displayed in quota) */
     availableModels: ModelInfo[];
 }
 
 /**
- * Webview 消息类型
+ * Webview Message Type
  */
 export interface AutoTriggerMessage {
     type: 
@@ -118,17 +118,17 @@ export interface AutoTriggerMessage {
 }
 
 /**
- * Crontab 解析结果
+ * Crontab Parse Result
  */
 export interface CrontabParseResult {
     valid: boolean;
-    description?: string;  // 人类可读描述
-    nextRuns?: Date[];     // 接下来几次运行时间
+    description?: string;  // Human-readable description
+    nextRuns?: Date[];     // Next run times
     error?: string;
 }
 
 /**
- * 预设调度模板
+ * Preset Schedule Template
  */
 export interface SchedulePreset {
     id: string;
@@ -138,13 +138,13 @@ export interface SchedulePreset {
 }
 
 /**
- * 预设调度模板列表
+ * Preset Schedule Template List
  */
 export const SCHEDULE_PRESETS: SchedulePreset[] = [
     {
         id: 'morning',
-        name: '早间预触发',
-        description: '每天早上 7:00 触发一次',
+        name: 'Morning Pre-trigger',
+        description: 'Trigger once daily at 7:00 AM',
         config: {
             repeatMode: 'daily',
             dailyTimes: ['07:00'],
@@ -153,8 +153,8 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
     },
     {
         id: 'workday',
-        name: '工作日预触发',
-        description: '工作日早上 8:00 触发',
+        name: 'Workday Pre-trigger',
+        description: 'Trigger at 8:00 AM on weekdays',
         config: {
             repeatMode: 'weekly',
             weeklyDays: [1, 2, 3, 4, 5],
@@ -164,8 +164,8 @@ export const SCHEDULE_PRESETS: SchedulePreset[] = [
     },
     {
         id: 'every4h',
-        name: '每 4 小时触发',
-        description: '从 7:00 开始，每 4 小时触发一次',
+        name: 'Trigger every 4 hours',
+        description: 'Trigger every 4 hours starting from 7:00 AM',
         config: {
             repeatMode: 'interval',
             intervalHours: 4,

@@ -1,6 +1,6 @@
 /**
  * Antigravity Cockpit - Trigger Service
- * 触发服务：执行自动对话触发
+ * Trigger Service: Execute automatic conversation trigger
  */
 
 import { oauthService } from './oauth_service';
@@ -8,7 +8,7 @@ import { credentialStorage } from './credential_storage';
 import { TriggerRecord, ModelInfo } from './types';
 import { logger } from '../shared/log_service';
 
-// Antigravity API 配置
+// Antigravity API Configuration
 const ANTIGRAVITY_API_URL = 'https://daily-cloudcode-pa.sandbox.googleapis.com';
 const ANTIGRAVITY_USER_AGENT = 'antigravity/1.11.3 windows/amd64';
 const ANTIGRAVITY_METADATA = {
@@ -19,24 +19,24 @@ const ANTIGRAVITY_METADATA = {
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
- * 触发服务
- * 负责发送对话请求以触发配额重置周期
+ * Trigger Service
+ * Responsible for sending conversation requests to trigger quota reset cycle
  */
 class TriggerService {
     private recentTriggers: TriggerRecord[] = [];
-    private readonly maxRecords = 40;  // 最多保留 40 条
-    private readonly maxDays = 7;      // 最多保留 7 天
+    private readonly maxRecords = 40;  // Keep max 40 records
+    private readonly maxDays = 7;      // Keep max 7 days
     private readonly storageKey = 'triggerHistory';
 
     /**
-     * 初始化：从存储加载历史记录
+     * Initialize: Load history from storage
      */
     initialize(): void {
         this.loadHistory();
     }
 
     /**
-     * 从存储加载历史记录
+     * Load history from storage
      */
     private loadHistory(): void {
         const saved = credentialStorage.getState<TriggerRecord[]>(this.storageKey, []);
@@ -45,53 +45,53 @@ class TriggerService {
     }
 
     /**
-     * 保存历史记录到存储
+     * Save history to storage
      */
     private saveHistory(): void {
         credentialStorage.saveState(this.storageKey, this.recentTriggers);
     }
 
     /**
-     * 清理过期记录（超过 7 天或超过 40 条）
+     * Clean up expired records (older than 7 days or exceeding 40 records)
      */
     private cleanupRecords(records: TriggerRecord[]): TriggerRecord[] {
         const now = Date.now();
-        const maxAge = this.maxDays * 24 * 60 * 60 * 1000;  // 7 天的毫秒数
+        const maxAge = this.maxDays * 24 * 60 * 60 * 1000;  // Milliseconds in 7 days
         
-        // 过滤掉超过 7 天的记录
+        // Filter out records older than 7 days
         const filtered = records.filter(record => {
             const recordTime = new Date(record.timestamp).getTime();
             return (now - recordTime) < maxAge;
         });
         
-        // 限制最多 40 条
+        // Limit to max 40 records
         return filtered.slice(0, this.maxRecords);
     }
 
     /**
-     * 执行触发
-     * 发送一条简短的对话消息以触发配额计时
-     * @param models 要触发的模型列表，如果不传则使用默认
+     * Execute trigger
+     * Send a short conversation message to trigger quota timing
+     * @param models List of models to trigger, defaults used if not provided
      */
     async trigger(models?: string[], triggerType: 'manual' | 'auto' = 'manual'): Promise<TriggerRecord> {
         const startTime = Date.now();
         const triggerModels = (models && models.length > 0) ? models : ['gemini-3-flash'];
-        const promptText = 'hi';  // 发送的请求内容
+        const promptText = 'hi';  // Content of request sent
         
         logger.info(`[TriggerService] Starting trigger (${triggerType}) for models: ${triggerModels.join(', ')}...`);
 
         try {
-            // 1. 获取有效的 access_token
+            // 1. Get valid access_token
             const accessToken = await oauthService.getValidAccessToken();
             if (!accessToken) {
                 throw new Error('No valid access token. Please authorize first.');
             }
 
-            // 2. 获取 project_id
+            // 2. Get project_id
             const credential = await credentialStorage.getCredential();
             const projectId = credential?.projectId || await this.fetchProjectId(accessToken);
 
-            // 3. 发送触发请求
+            // 3. Send trigger request
             const results = [];
             
             for (const model of triggerModels) {
@@ -99,7 +99,7 @@ class TriggerService {
                 results.push(`${model}: ${reply}`);
             }
 
-            // 4. 记录成功
+            // 4. Record success
             const record: TriggerRecord = {
                 timestamp: new Date().toISOString(),
                 success: true,
@@ -116,7 +116,7 @@ class TriggerService {
         } catch (error) {
             const err = error instanceof Error ? error : new Error(String(error));
             
-            // 记录失败
+            // Record failure
             const record: TriggerRecord = {
                 timestamp: new Date().toISOString(),
                 success: false,
@@ -133,21 +133,21 @@ class TriggerService {
     }
 
     /**
-     * 获取最近的触发记录
+     * Get recent trigger records
      */
     getRecentTriggers(): TriggerRecord[] {
         return [...this.recentTriggers];
     }
 
     /**
-     * 获取最后一次触发记录
+     * Get last trigger record
      */
     getLastTrigger(): TriggerRecord | undefined {
         return this.recentTriggers[0];
     }
 
     /**
-     * 清空历史记录
+     * Clear history
      */
     clearHistory(): void {
         this.recentTriggers = [];
@@ -156,18 +156,18 @@ class TriggerService {
     }
 
     /**
-     * 添加触发记录
+     * Add trigger record
      */
     private addRecord(record: TriggerRecord): void {
         this.recentTriggers.unshift(record);
-        // 清理并限制数量
+        // Clean up and limit count
         this.recentTriggers = this.cleanupRecords(this.recentTriggers);
-        // 持久化保存
+        // Persist to storage
         this.saveHistory();
     }
 
     /**
-     * 获取 project_id
+     * Get project_id
      */
     private async fetchProjectId(accessToken: string): Promise<string> {
         const projectId = await this.tryLoadCodeAssist(accessToken)
@@ -188,8 +188,8 @@ class TriggerService {
     }
 
     /**
-     * 获取可用模型列表
-     * @param filterByConstants 可选，配额中显示的模型常量列表，用于过滤
+     * Get available model list
+     * @param filterByConstants Optional, list of model constants displayed in quota, used for filtering
      */
     async fetchAvailableModels(filterByConstants?: string[]): Promise<ModelInfo[]> {
         const accessToken = await oauthService.getValidAccessToken();
@@ -203,7 +203,7 @@ class TriggerService {
 
         if (!result.ok || !result.data) {
             logger.warn('[TriggerService] fetchAvailableModels failed, returning empty');
-            // 返回空数组，让前端从配额数据中获取模型列表
+            // Return empty array, let frontend get model list from quota data
             return [];
         }
 
@@ -212,16 +212,16 @@ class TriggerService {
             return [];
         }
 
-        // 构建 ModelInfo 数组
+        // Build ModelInfo array
         const allModels: ModelInfo[] = Object.entries(data.models).map(([id, info]) => ({
             id,
             displayName: info.displayName || id,
             modelConstant: info.model || '',
         }));
 
-        // 如果提供了过滤列表，按顺序返回匹配的模型
+        // If filter list provided, return matching models in order
         if (filterByConstants && filterByConstants.length > 0) {
-            // 建立 modelConstant -> ModelInfo 的映射
+            // Build modelConstant -> ModelInfo map
             const modelMap = new Map<string, ModelInfo>();
             for (const model of allModels) {
                 if (model.modelConstant) {
@@ -229,7 +229,7 @@ class TriggerService {
                 }
             }
             
-            // 按照 filterByConstants 的顺序返回
+            // Return in order of filterByConstants
             const sorted: ModelInfo[] = [];
             for (const constant of filterByConstants) {
                 const model = modelMap.get(constant);
@@ -247,9 +247,9 @@ class TriggerService {
     }
 
     /**
-     * 发送触发请求
-     * 发送一条简短的消息来触发配额计时
-     * @returns AI 的简短回复
+     * Send trigger request
+     * Send a short message to trigger quota timing
+     * @returns Short reply from AI
      */
     private async sendTriggerRequest(accessToken: string, projectId: string, model: string): Promise<string> {
         const sessionId = this.generateSessionId();
@@ -264,11 +264,11 @@ class TriggerService {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: 'hi' }],  // 最简短的消息
+                        parts: [{ text: 'hi' }],  // Shortest message
                     },
                 ],
                 session_id: sessionId,
-                // 不限制输出长度，让模型自然回复
+                // No output length limit, let model reply naturally
             },
         };
 
@@ -289,18 +289,18 @@ class TriggerService {
         }
 
         const text = await response.text();
-        // 输出完整响应，便于调试
+        // Output complete response for debugging
         logger.info(`[TriggerService] generateContent response: ${text.substring(0, 2000)}`);
         
         try {
             const data = JSON.parse(text);
-            // Antigravity API 响应结构：data.response.candidates[0].content.parts[0].text
-            // 或者直接：data.candidates[0].content.parts[0].text
+            // Antigravity API response structure: data.response.candidates[0].content.parts[0].text
+            // Or directly: data.candidates[0].content.parts[0].text
             const candidates = data?.response?.candidates || data?.candidates;
-            const reply = candidates?.[0]?.content?.parts?.[0]?.text || '(无回复)';
+            const reply = candidates?.[0]?.content?.parts?.[0]?.text || '(No reply)';
             return reply.trim();
         } catch {
-            return '(收到非 JSON 响应)';
+            return '(Non-JSON response received)';
         }
     }
 
@@ -421,7 +421,7 @@ class TriggerService {
             const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
             try {
-                // 如果是重试，等待一小会儿 (指数退避)
+                // If retry, wait a short while (exponential backoff)
                 if (attempt > 0) {
                     const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
                     logger.info(`[TriggerService] Retrying request (${attempt}/${retries}) in ${delay}ms...`);
@@ -458,14 +458,14 @@ class TriggerService {
                 };
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
-                // 只对 fetch 错误（网络错误）进行重试，不包括超时
+                // Only retry on fetch errors (network errors), excluding timeouts
                 if (lastError.name === 'AbortError') {
-                    // 超时通常不再重试，除非你想，这里假设超时不重试以快速失败
-                    // 但如果是 fetch failed，通常是网络问题
+                    // Timeouts generally not retried, assume fail fast here
+                    // But if fetch failed, usually network issue
                 }
                 logger.warn(`[TriggerService] Request attempt ${attempt + 1} failed: ${lastError.message}`);
                 
-                // 如果是最后一次尝试，或者错误不是网络连接错误（简单起见，所有 fetch 异常都重试），退出循环
+                // If last attempt, or error is not network error (for simplicity, retry all fetch exceptions), break loop
                 if (attempt === retries) {
                     break;
                 }
@@ -482,19 +482,19 @@ class TriggerService {
     }
 
     /**
-     * 生成 session_id
+     * Generate session_id
      */
     private generateSessionId(): string {
         return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     }
 
     /**
-     * 生成 request_id
+     * Generate request_id
      */
     private generateRequestId(): string {
         return `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     }
 }
 
-// 导出单例
+// Export Singleton
 export const triggerService = new TriggerService();

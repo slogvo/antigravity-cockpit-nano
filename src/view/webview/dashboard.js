@@ -1,15 +1,15 @@
 /**
- * Antigravity Cockpit - Dashboard 脚本
- * 处理 Webview 交互逻辑
+ * Antigravity Cockpit - Dashboard Script
+ * Handle Webview interaction logic
  */
 
 (function() {
     'use strict';
 
-    // 获取 VS Code API（保存到全局供其他模块复用）
+    // Get VS Code API (Save to global for other modules)
     const vscode = window.__vscodeApi || (window.__vscodeApi = acquireVsCodeApi());
 
-    // DOM 元素
+    // DOM Elements
     const dashboard = document.getElementById('dashboard');
     const statusDiv = document.getElementById('status');
     const refreshBtn = document.getElementById('refresh-btn');
@@ -18,40 +18,40 @@
     const settingsModal = document.getElementById('settings-modal');
     const renameModal = document.getElementById('rename-modal');
 
-    // 国际化文本
+    // Localized Text
     const i18n = window.__i18n || {};
 
-    // 状态
+    // State
     let isRefreshing = false;
     let dragSrcEl = null;
     let currentConfig = {};
     let lastSnapshot = null; // Store last snapshot for re-renders
-    let renameGroupId = null; // 当前正在重命名的分组 ID
-    let renameModelIds = [];  // 当前分组包含的模型 ID
-    let renameModelId = null; // 当前正在重命名的模型 ID（非分组模式）
-    let isRenamingModel = false; // 标记是否正在重命名模型（而非分组）
+    let renameGroupId = null; // Currently renaming group ID
+    let renameModelIds = [];  // Model IDs in current group
+    let renameModelId = null; // Currently renaming model ID (non-group mode)
+    let isRenamingModel = false; // Flag: is renaming model (not group)
     let currentViewMode = 'card';
-    let renameOriginalName = ''; // 原始名称（用于重置）
-    let isProfileHidden = false;  // 控制整个计划详情卡片的显示/隐藏
-    let isDataMasked = false;     // 控制数据是否显示为 ***
+    let renameOriginalName = ''; // Original name (for reset)
+    let isProfileHidden = false;  // Control plan details card visibility
+    let isDataMasked = false;     // Control if data is masked as ***
 
-    // 刷新冷却时间（秒），默认 120 秒
+    // Refresh cooldown (seconds), default 120s
     let refreshCooldown = 120;
 
-    // 自定义分组弹框状态
+    // Custom grouping modal state
     const customGroupingModal = document.getElementById('custom-grouping-modal');
     let customGroupingState = {
         groups: [],       // { id: string, name: string, modelIds: string[] }
-        allModels: [],    // 所有模型数据（从 snapshot 获取）
-        groupMappings: {} // 原始分组映射（用于保存）
+        allModels: [],    // All model data (from snapshot)
+        groupMappings: {} // Original group mappings (for saving)
     };
 
 
 
-    // ============ 初始化 ============
+    // ============ Initialization ============
 
     function init() {
-        // 恢复状态
+        // Restore State
         const state = vscode.getState() || {};
         if (state.lastRefresh && state.refreshCooldown) {
             const now = Date.now();
@@ -66,49 +66,49 @@
         // 绑定事件
         refreshBtn.addEventListener('click', handleRefresh);
         
-        // 初始化富文本 Tooltip
+        // Init Rich Tooltip
         initRichTooltip();
         if (resetOrderBtn) {
             resetOrderBtn.addEventListener('click', handleResetOrder);
         }
         
-        // 计划详情开关按钮
+        // Plan Details Toggle Button
         const toggleProfileBtn = document.getElementById('toggle-profile-btn');
         if (toggleProfileBtn) {
             toggleProfileBtn.addEventListener('click', handleToggleProfile);
         }
         
-        // 分组开关按钮
+        // Grouping Toggle Button
         const toggleGroupingBtn = document.getElementById('toggle-grouping-btn');
         if (toggleGroupingBtn) {
             toggleGroupingBtn.addEventListener('click', handleToggleGrouping);
         }
         
-        // 设置按钮
+        // Settings Button
         const settingsBtn = document.getElementById('settings-btn');
         if (settingsBtn) {
             settingsBtn.addEventListener('click', openSettingsModal);
         }
         
-        // 关闭设置模态框
+        // Close Settings Modal
         const closeSettingsBtn = document.getElementById('close-settings-btn');
         if (closeSettingsBtn) {
             closeSettingsBtn.addEventListener('click', closeSettingsModal);
         }
         
-        // 重命名模态框 - 关闭按钮
+        // Rename Modal - Close Button
         const closeRenameBtn = document.getElementById('close-rename-btn');
         if (closeRenameBtn) {
             closeRenameBtn.addEventListener('click', closeRenameModal);
         }
         
-        // 重命名模态框 - 确定按钮
+        // Rename Modal - Confirm Button
         const saveRenameBtn = document.getElementById('save-rename-btn');
         if (saveRenameBtn) {
             saveRenameBtn.addEventListener('click', saveRename);
         }
         
-        // 重命名输入框 - 回车键确认
+        // Rename Input - Enter Key Confirm
         const renameInput = document.getElementById('rename-input');
         if (renameInput) {
             renameInput.addEventListener('keydown', (e) => {
@@ -118,13 +118,13 @@
             });
         }
         
-        // 重置名称按钮
+        // Reset Name Button
         const resetNameBtn = document.getElementById('reset-name-btn');
         if (resetNameBtn) {
             resetNameBtn.addEventListener('click', resetName);
         }
 
-        // 自定义分组弹框事件绑定
+        // Custom Grouping Modal Event Binding
         const closeCustomGroupingBtn = document.getElementById('close-custom-grouping-btn');
         if (closeCustomGroupingBtn) {
             closeCustomGroupingBtn.addEventListener('click', closeCustomGroupingModal);
@@ -167,7 +167,7 @@
         const announcementPopupAction = document.getElementById('announcement-popup-action');
         if (announcementPopupAction) announcementPopupAction.addEventListener('click', handleAnnouncementAction);
 
-        // 事件委托：处理置顶开关
+        // Event Delegation: Handle Pin Toggle
         dashboard.addEventListener('change', (e) => {
             if (e.target.classList.contains('pin-toggle')) {
                 const modelId = e.target.getAttribute('data-model-id');
@@ -177,17 +177,17 @@
             }
         });
 
-        // 监听消息
+        // Listen for Messages
         window.addEventListener('message', handleMessage);
 
-        // Tab 导航切换
+        // Tab Navigation Toggle
         initTabNavigation();
 
-        // 通知扩展已准备就绪
+        // Notify extension is ready
         vscode.postMessage({ command: 'init' });
     }
     
-    // ============ Tab 导航 ============
+    // ============ Tab Navigation ============
     
     function initTabNavigation() {
         const tabButtons = document.querySelectorAll('.tab-btn');
@@ -197,11 +197,11 @@
             btn.addEventListener('click', () => {
                 const targetTab = btn.getAttribute('data-tab');
                 
-                // 更新按钮状态
+                // Update button state
                 tabButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
-                // 更新内容显示
+                // Update content display
                 tabContents.forEach(content => {
                     if (content.id === `tab-${targetTab}`) {
                         content.classList.add('active');
@@ -210,17 +210,17 @@
                     }
                 });
                 
-                // 通知扩展 Tab 切换（可用于状态同步）
+                // Notify extension Tab change (for state sync)
                 vscode.postMessage({ command: 'tabChanged', tab: targetTab });
             });
         });
     }
     
-    // ============ 设置模态框 ============
+    // ============ Settings Modal ============
     
     function openSettingsModal() {
         if (settingsModal) {
-            // 从当前配置填充值
+            // Fill values from current config
             const notificationCheckbox = document.getElementById('notification-enabled');
             const warningInput = document.getElementById('warning-threshold');
             const criticalInput = document.getElementById('critical-threshold');
@@ -253,10 +253,10 @@
                 };
             }
 
-            // 初始化状态栏格式选择器
+            // Init Status Bar Format Selector
             initStatusBarFormatSelector();
             
-            // 初始化即时保存事件
+            // Init Auto-Save Events
             initSettingsAutoSave();
 
             settingsModal.classList.remove('hidden');
@@ -264,7 +264,7 @@
     }
     
     /**
-     * 初始化状态栏格式选择器（下拉框）
+     * Init Status Bar Format Selector (Dropdown)
      */
     function initStatusBarFormatSelector() {
         const formatSelect = document.getElementById('statusbar-format');
@@ -273,12 +273,12 @@
         const currentFormat = currentConfig.statusBarFormat || 'standard';
         formatSelect.value = currentFormat;
         
-        // 绑定 change 事件
+        // Bind change event
         formatSelect.onchange = null;
         formatSelect.addEventListener('change', () => {
             const format = formatSelect.value;
             
-            // 发送消息到扩展，立即更新状态栏
+            // Send message to extension, update status bar immediately
             vscode.postMessage({
                 command: 'updateStatusBarFormat',
                 statusBarFormat: format
@@ -287,14 +287,14 @@
     }
     
     /**
-     * 初始化设置自动保存（即时生效）
+     * Init Settings Auto-Save (Immediate Effect)
      */
     function initSettingsAutoSave() {
         const notificationCheckbox = document.getElementById('notification-enabled');
         const warningInput = document.getElementById('warning-threshold');
         const criticalInput = document.getElementById('critical-threshold');
         
-        // 通知开关即时保存
+        // Notification toggle auto-save
         if (notificationCheckbox) {
             notificationCheckbox.onchange = null;
             notificationCheckbox.addEventListener('change', () => {
@@ -305,7 +305,7 @@
             });
         }
         
-        // 阈值输入框失焦时自动钳位并保存
+        // Clamp and save thresholds on blur
         if (warningInput) {
             warningInput.onblur = null;
             warningInput.addEventListener('blur', () => {
@@ -322,7 +322,7 @@
     }
     
     /**
-     * 钳位阈值并保存
+     * Clamp and save thresholds
      */
     function clampAndSaveThresholds() {
         const warningInput = document.getElementById('warning-threshold');
@@ -331,19 +331,19 @@
         let warningValue = parseInt(warningInput?.value, 10) || 30;
         let criticalValue = parseInt(criticalInput?.value, 10) || 10;
 
-        // 自动钳制到有效范围
+        // Auto-clamp to valid range
         if (warningValue < 5) warningValue = 5;
         if (warningValue > 80) warningValue = 80;
         if (criticalValue < 1) criticalValue = 1;
         if (criticalValue > 50) criticalValue = 50;
 
-        // 确保 critical < warning
+        // Ensure critical < warning
         if (criticalValue >= warningValue) {
             criticalValue = warningValue - 1;
             if (criticalValue < 1) criticalValue = 1;
         }
 
-        // 更新输入框显示钳制后的值
+        // Update input display with clamped value
         if (warningInput) warningInput.value = warningValue;
         if (criticalInput) criticalInput.value = criticalValue;
 
@@ -351,7 +351,7 @@
     }
     
     /**
-     * 保存阈值设置
+     * Save threshold settings
      */
     function saveThresholds() {
         const notificationCheckbox = document.getElementById('notification-enabled');
@@ -362,7 +362,7 @@
         const warningValue = parseInt(warningInput?.value, 10) || 30;
         const criticalValue = parseInt(criticalInput?.value, 10) || 10;
 
-        // 发送到扩展保存
+        // Send to extension to save
         vscode.postMessage({
             command: 'updateThresholds',
             notificationEnabled: notificationEnabled,
@@ -377,13 +377,13 @@
         }
     }
     
-    // ============ 重命名模态框 ============
+    // ============ Rename Modal ============
     
     function openRenameModal(groupId, currentName, modelIds) {
         if (renameModal) {
             renameGroupId = groupId;
             renameModelIds = modelIds || [];
-            isRenamingModel = false; // 分组重命名模式
+            isRenamingModel = false; // Group rename mode
             renameModelId = null;
             
             const renameInput = document.getElementById('rename-input');
@@ -398,17 +398,17 @@
     }
     
     /**
-     * 打开模型重命名模态框（非分组模式）
-     * @param {string} modelId 模型 ID
-     * @param {string} currentName 当前名称
+     * Open Model Rename Modal (Non-Group Mode)
+     * @param {string} modelId Model ID
+     * @param {string} currentName Current Name
      */
     function openModelRenameModal(modelId, currentName, originalName) {
         if (renameModal) {
-            isRenamingModel = true; // 模型重命名模式
+            isRenamingModel = true; // Model rename mode
             renameModelId = modelId;
             renameGroupId = null;
             renameModelIds = [];
-            renameOriginalName = originalName || currentName || ''; // 保存原始名称
+            renameOriginalName = originalName || currentName || ''; // Save original name
             
             const renameInput = document.getElementById('rename-input');
             if (renameInput) {
@@ -442,16 +442,16 @@
         }
         
         if (isRenamingModel && renameModelId) {
-            // 模型重命名模式
+            // Model rename mode
             vscode.postMessage({
                 command: 'renameModel',
                 modelId: renameModelId,
-                groupName: newName  // 复用 groupName 字段
+                groupName: newName  // Reuse groupName field
             });
             
             showToast((i18n['model.renamed'] || 'Model renamed to {name}').replace('{name}', newName), 'success');
         } else if (renameGroupId && renameModelIds.length > 0) {
-            // 分组重命名模式
+            // Group rename mode
             vscode.postMessage({
                 command: 'renameGroup',
                 groupId: renameGroupId,
@@ -465,18 +465,18 @@
         closeRenameModal();
     }
     /**
-     * 重置名称为默认值（填入输入框，不直接提交）
+     * Reset name to default (fill input, do not submit)
      */
     function resetName() {
         const renameInput = document.getElementById('rename-input');
         if (!renameInput) return;
         
         if (isRenamingModel && renameModelId && renameOriginalName) {
-            // 模型重置模式：将原始名称填入输入框
+            // Model reset mode: fill original name into input
             renameInput.value = renameOriginalName;
             renameInput.focus();
         }
-        // 分组重置暂不支持
+        // Group reset not supported yet
     }
     
     function handleToggleProfile() {
@@ -498,7 +498,7 @@
     }
     
     function handleToggleGrouping() {
-        // 发送切换分组的消息给扩展
+        // Send toggle grouping message to extension
         vscode.postMessage({ command: 'toggleGrouping' });
     }
     
@@ -515,7 +515,7 @@
         }
     }
 
-    // ============ 事件处理 ============
+    // ============ Event Handling ============
 
     function handleRefresh() {
         if (refreshBtn.disabled) return;
@@ -548,7 +548,7 @@
     function handleMessage(event) {
         const message = event.data;
         
-        // 处理标签页切换消息
+        // Handle tab switch message
         if (message.type === 'switchTab' && message.tab) {
             switchToTab(message.tab);
             return;
@@ -558,16 +558,16 @@
             isRefreshing = false;
             updateRefreshButton();
             
-            // 保存配置
+            // Save config
             if (message.config) {
                 currentConfig = message.config;
                 
-                // 从配置更新刷新冷却时间
+                // Update refresh cooldown from config
                 if (message.config.refreshInterval) {
                     refreshCooldown = message.config.refreshInterval;
                 }
                 
-                // 从配置读取 profileHidden 和 viewMode（持久化存储）
+                // Read profileHidden and viewMode from config (persisted)
                 if (message.config.profileHidden !== undefined) {
                     isProfileHidden = message.config.profileHidden;
                     updateToggleProfileButton();
@@ -575,7 +575,7 @@
                 if (message.config.viewMode) {
                     currentViewMode = message.config.viewMode;
                 }
-                // 从配置读取 dataMasked 状态（持久化存储）
+                // Read dataMasked state from config (persisted)
                 if (message.config.dataMasked !== undefined) {
                     isDataMasked = message.config.dataMasked;
                 }
@@ -587,29 +587,29 @@
             lastSnapshot = message.data; // Update global snapshot
         }
         
-        // 处理公告状态更新
+        // Handle announcement state update
         if (message.type === 'announcementState') {
             handleAnnouncementState(message.data);
         }
     }
     
     /**
-     * 切换到指定标签页
-     * @param {string} tabId 标签页 ID (如 'auto-trigger')
+     * Switch to specified tab
+     * @param {string} tabId Tab ID (e.g. 'auto-trigger')
      */
     function switchToTab(tabId) {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
         
-        // 查找目标按钮
+        // Find target button
         const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
         if (!targetBtn) return;
         
-        // 更新按钮状态
+        // Update button state
         tabButtons.forEach(b => b.classList.remove('active'));
         targetBtn.classList.add('active');
         
-        // 更新内容显示
+        // Update content display
         tabContents.forEach(content => {
             if (content.id === `tab-${tabId}`) {
                 content.classList.add('active');
@@ -619,7 +619,7 @@
         });
     }
 
-    // ============ 刷新按钮逻辑 ============
+    // ============ Refresh Button Logic ============
 
     function updateRefreshButton() {
         if (isRefreshing) {
@@ -644,7 +644,7 @@
         }, 1000);
     }
 
-    // ============ Toast 通知 ============
+    // ============ Toast Notification ============
 
     function showToast(message, type = 'info') {
         if (!toast) return;
@@ -652,38 +652,38 @@
         toast.textContent = message;
         toast.className = `toast ${type}`;
         
-        // 3秒后隐藏
+        // Hide after 3 seconds
         setTimeout(() => {
             toast.classList.add('hidden');
         }, 3000);
     }
 
-    // ============ 工具函数 ============
+    // ============ Utility Functions ============
 
     function getHealthColor(percentage) {
-        // 使用配置的阈值
+        // Use configured thresholds
         const warningThreshold = currentConfig.warningThreshold || 30;
         const criticalThreshold = currentConfig.criticalThreshold || 10;
         
-        if (percentage > warningThreshold) return 'var(--success)';  // 绿色
-        if (percentage > criticalThreshold) return 'var(--warning)';  // 黄色
-        return 'var(--danger)';                                       // 红色
+        if (percentage > warningThreshold) return 'var(--success)';  // Green
+        if (percentage > criticalThreshold) return 'var(--warning)';  // Yellow
+        return 'var(--danger)';                                       // Red
     }
 
     function getStatusText(percentage) {
-        // 使用配置的阈值
+        // Use configured thresholds
         const warningThreshold = currentConfig.warningThreshold || 30;
         const criticalThreshold = currentConfig.criticalThreshold || 10;
         
-        if (percentage > warningThreshold) return i18n['dashboard.active'] || 'Healthy';   // 健康
-        if (percentage > criticalThreshold) return i18n['dashboard.warning'] || 'Warning';  // 警告
-        return i18n['dashboard.danger'] || 'Danger';                                        // 危险
+        if (percentage > warningThreshold) return i18n['dashboard.active'] || 'Healthy';   // Healthy
+        if (percentage > criticalThreshold) return i18n['dashboard.warning'] || 'Warning';  // Warning
+        return i18n['dashboard.danger'] || 'Danger';                                        // Danger
     }
 
     /**
-     * 解析模型能力，返回图标数组
-     * @param {Object} model 模型对象
-     * @returns {string[]} 能力图标 HTML 数组
+     * Parse model capabilities, return icon array
+     * @param {Object} model Model object
+     * @returns {string[]} Capability icon HTML array
      */
 
 
@@ -1054,7 +1054,7 @@
     window.retryConnection = retryConnection;
     window.openLogs = openLogs;
 
-    // ============ 拖拽排序 ============
+    // ============ Drag and Drop Sorting ============
 
     function handleDragStart(e) {
         this.style.opacity = '0.4';
@@ -1103,7 +1103,7 @@
             // Get updated list of all items in this container
             const updatedItems = Array.from(dashboardOrTbody.querySelectorAll(selector));
             
-            // 检查是否是分组
+            // Check if it is a group
             const isGroup = dragSrcEl.classList.contains('group-card') || dragSrcEl.classList.contains('list-group-row');
             
             if (isGroup) {
@@ -1133,13 +1133,13 @@
         });
     }
 
-    // ============ 渲染 ============
+    // ============ Rendering ============
 
     function render(snapshot, config) {
         statusDiv.style.display = 'none';
         dashboard.innerHTML = '';
 
-        // 检查离线状态
+        // Check offline status
         if (!snapshot.isConnected) {
             renderOfflineCard(snapshot.errorMessage);
             return;
@@ -1158,15 +1158,15 @@
         }
         // =================================================
         
-        // 更新分组按钮状态
+        // Update grouping toggle button state
         updateToggleGroupingButton(config?.groupingEnabled);
         
-        // 如果启用了分组显示，渲染分组卡片
+        // If grouping is enabled, render group cards
         if (config?.groupingEnabled && snapshot.groups && snapshot.groups.length > 0) {
-            // 渲染自动分组按钮区域
+            // Render auto-grouping button area
             renderAutoGroupBar();
             
-            // 分组排序：支持自定义顺序
+            // Group sorting: support custom order
             let groups = [...snapshot.groups];
             if (config?.groupOrder?.length > 0) {
                 const orderMap = new Map();
@@ -1176,7 +1176,7 @@
                     const idxA = orderMap.has(a.groupId) ? orderMap.get(a.groupId) : 99999;
                     const idxB = orderMap.has(b.groupId) ? orderMap.get(b.groupId) : 99999;
                     if (idxA !== idxB) return idxA - idxB;
-                    // 如果没有自定义顺序，按配额百分比升序（低的在前）
+                    // If no custom order, sort by quota percentage ascending (low to high)
                     return a.remainingPercentage - b.remainingPercentage;
                 });
             }
@@ -1187,7 +1187,7 @@
             return;
         }
 
-        // 模型排序
+        // Model sorting
         let models = [...snapshot.models];
         if (config?.modelOrder?.length > 0) {
             const orderMap = new Map();
@@ -1200,7 +1200,7 @@
             });
         }
 
-        // 渲染模型卡片
+        // Render model cards
         models.forEach(model => {
             renderModelCard(model, config?.pinnedModels || [], config?.modelCustomNames || {});
         });
@@ -1232,24 +1232,24 @@
         `;
         dashboard.appendChild(bar);
         
-        // 绑定点击事件 - 打开自定义分组弹框
+        // Bind click event - Open custom grouping modal
         const btn = bar.querySelector('#manage-group-btn');
         if (btn) {
             btn.addEventListener('click', openCustomGroupingModal);
         }
     }
 
-    // ============ 自定义分组弹框 ============
+    // ============ Custom Grouping Modal ============
 
     function openCustomGroupingModal() {
         if (!customGroupingModal || !lastSnapshot) return;
         
-        // 初始化状态
+        // Initialize state
         const models = lastSnapshot.models || [];
         customGroupingState.allModels = models;
         customGroupingState.groupMappings = { ...(currentConfig.groupMappings || {}) };
         
-        // 从现有映射构建分组
+        // Build groups from existing mappings
         const groupMap = new Map(); // groupId -> { id, name, modelIds }
         const groupNames = currentConfig.groupCustomNames || {};
         
@@ -1257,7 +1257,7 @@
             const groupId = customGroupingState.groupMappings[model.modelId];
             if (groupId) {
                 if (!groupMap.has(groupId)) {
-                    // 尝试从 groupNames 获取名称，否则使用默认名称
+                    // Try getting name from groupNames, otherwise use default
                     let groupName = '';
                     for (const modelId of Object.keys(groupNames)) {
                         if (customGroupingState.groupMappings[modelId] === groupId) {
@@ -1277,7 +1277,7 @@
         
         customGroupingState.groups = Array.from(groupMap.values());
         
-        // 渲染弹框内容
+        // Render modal content
         renderCustomGroupingContent();
         
         customGroupingModal.classList.remove('hidden');
@@ -1295,11 +1295,11 @@
         
         if (!groupsList || !ungroupedList) return;
         
-        // 获取已分组的模型 ID
+        // Get grouped model IDs
         const groupedModelIds = new Set();
         customGroupingState.groups.forEach(g => g.modelIds.forEach(id => groupedModelIds.add(id)));
         
-        // 渲染分组列表
+        // Render group list
         if (customGroupingState.groups.length === 0) {
             groupsList.innerHTML = `<div class="empty-groups-hint">${i18n['customGrouping.noModels'] || 'No groups yet. Click "Add Group" to create one.'}</div>`;
         } else {
@@ -1336,7 +1336,7 @@
                 `;
             }).join('');
             
-            // 绑定事件
+            // Bind events
             groupsList.querySelectorAll('.remove-model-btn').forEach(btn => {
                 btn.addEventListener('click', handleRemoveModel);
             });
@@ -1351,7 +1351,7 @@
             });
         }
         
-        // 渲染未分组模型
+        // Render ungrouped models
         const ungroupedModels = customGroupingState.allModels.filter(m => !groupedModelIds.has(m.modelId));
         
         if (ungroupedModels.length === 0) {
@@ -1416,11 +1416,11 @@
         const group = customGroupingState.groups[groupIndex];
         if (!group) return;
         
-        // 获取已分组的模型
+        // Get grouped models
         const groupedModelIds = new Set();
         customGroupingState.groups.forEach(g => g.modelIds.forEach(id => groupedModelIds.add(id)));
         
-        // 获取可用模型（未分组的）
+        // Get available models (ungrouped)
         const availableModels = customGroupingState.allModels.filter(m => !groupedModelIds.has(m.modelId));
         
         if (availableModels.length === 0) {
@@ -1428,7 +1428,7 @@
             return;
         }
         
-        // 获取组的配额签名（如果组已有模型）
+        // Get group quota signature (if group has models)
         let groupSignature = null;
         if (group.modelIds.length > 0) {
             const firstModelId = group.modelIds[0];
@@ -1441,7 +1441,7 @@
             }
         }
         
-        // 创建下拉选择菜单
+        // Create dropdown selection menu
         showModelSelectDropdown(e.target, availableModels, groupSignature, (selectedModelId) => {
             group.modelIds.push(selectedModelId);
             renderCustomGroupingContent();
@@ -1449,7 +1449,7 @@
     }
 
     function showModelSelectDropdown(anchor, models, groupSignature, onSelect) {
-        // 移除已存在的下拉框
+        // Remove existing dropdown
         const existingDropdown = document.querySelector('.model-select-dropdown');
         if (existingDropdown) {
             existingDropdown.remove();
@@ -1458,13 +1458,13 @@
         const dropdown = document.createElement('div');
         dropdown.className = 'model-select-dropdown';
         
-        // 计算位置
+        // Calculate position
         const rect = anchor.getBoundingClientRect();
         dropdown.style.position = 'fixed';
         dropdown.style.left = rect.left + 'px';
         dropdown.style.top = (rect.bottom + 4) + 'px';
         
-        // 计算每个模型的兼容性
+        // Calculate compatibility for each model
         const modelsWithCompatibility = models.map(model => {
             let isCompatible = true;
             let incompatibleReason = '';
@@ -1482,14 +1482,14 @@
             return { model, isCompatible, incompatibleReason };
         });
         
-        // 排序：兼容的排在前面
+        // Sort: compatible ones first
         modelsWithCompatibility.sort((a, b) => {
             if (a.isCompatible && !b.isCompatible) return -1;
             if (!a.isCompatible && b.isCompatible) return 1;
             return 0;
         });
         
-        // 检查是否有兼容的模型
+        // Check if there are compatible models
         const hasCompatibleModels = modelsWithCompatibility.some(m => m.isCompatible);
         
         dropdown.innerHTML = `
@@ -1523,7 +1523,7 @@
         
         document.body.appendChild(dropdown);
         
-        // 选中计数和确认按钮逻辑
+        // Selection count and confirm button logic
         const confirmBtn = dropdown.querySelector('.btn-confirm-add');
         const countSpan = dropdown.querySelector('.selected-count');
         const allCheckboxes = dropdown.querySelectorAll('.model-checkbox');
@@ -1532,15 +1532,15 @@
             const checkedBoxes = dropdown.querySelectorAll('.model-checkbox:checked');
             const selectedCount = checkedBoxes.length;
             
-            // 更新计数和按钮状态
+            // Update count and button state
             if (countSpan) countSpan.textContent = selectedCount;
             if (confirmBtn) confirmBtn.disabled = selectedCount === 0;
             
-            // 获取当前选中模型的签名（用于动态兼容性检查）
-            let currentSignature = groupSignature; // 使用分组已有的签名
+            // Get signature of currently selected model (for dynamic compatibility check)
+            let currentSignature = groupSignature; // Use existing group signature
             
             if (!currentSignature && selectedCount > 0) {
-                // 如果分组为空，使用第一个选中模型的签名
+                // If group is empty, use signature of first selected model
                 const firstCheckedId = checkedBoxes[0].value;
                 const firstModel = modelsWithCompatibility.find(m => m.model.modelId === firstCheckedId);
                 if (firstModel) {
@@ -1551,9 +1551,9 @@
                 }
             }
             
-            // 更新所有 checkbox 的禁用状态
+            // Update disabled state of all checkboxes
             allCheckboxes.forEach(cb => {
-                if (cb.checked) return; // 已勾选的不处理
+                if (cb.checked) return; // Skip checked ones
                 
                 const modelId = cb.value;
                 const modelData = modelsWithCompatibility.find(m => m.model.modelId === modelId);
@@ -1562,7 +1562,7 @@
                 const item = cb.closest('.model-select-item');
                 if (!item) return;
                 
-                // 检查兼容性
+                // Check compatibility
                 let isCompatible = true;
                 let reason = '';
                 
@@ -1579,7 +1579,7 @@
                 cb.disabled = !isCompatible;
                 item.classList.toggle('disabled', !isCompatible);
                 
-                // 更新或移除不兼容原因显示
+                // Update or remove incompatible reason display
                 let reasonSpan = item.querySelector('.incompatible-reason');
                 if (!isCompatible) {
                     if (!reasonSpan) {
@@ -1600,21 +1600,21 @@
             }
         });
         
-        // 确认按钮点击
+        // Confirm button click
         if (confirmBtn) {
             confirmBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const selectedIds = Array.from(dropdown.querySelectorAll('.model-checkbox:checked'))
                     .map(cb => cb.value);
                 if (selectedIds.length > 0) {
-                    // 批量添加
+                    // Batch add
                     selectedIds.forEach(modelId => onSelect(modelId));
                     dropdown.remove();
                 }
             });
         }
         
-        // 点击外部关闭
+        // Click outside to close
         const closeHandler = (e) => {
             if (!dropdown.contains(e.target) && e.target !== anchor) {
                 dropdown.remove();
@@ -1627,14 +1627,14 @@
     }
 
     function handleSmartGroup() {
-        // 使用现有的自动分组逻辑预填数据
+        // Pre-fill data using existing auto-grouping logic
         const models = customGroupingState.allModels;
         if (!models || models.length === 0) {
             showToast(i18n['customGrouping.noModels'] || 'No models available', 'info');
             return;
         }
         
-        // 保存现有分组名称映射（modelId -> groupName）
+        // Save existing group name mapping (modelId -> groupName)
         const existingGroupNames = {};
         for (const group of customGroupingState.groups) {
             for (const modelId of group.modelIds) {
@@ -1642,7 +1642,7 @@
             }
         }
         
-        // 按配额签名分组
+        // Group by quota signature
         const signatureMap = new Map(); // signature -> modelIds
         for (const model of models) {
             const signature = `${(model.remainingPercentage || 0).toFixed(6)}_${model.resetTimeDisplay || ''}`;
@@ -1652,15 +1652,15 @@
             signatureMap.get(signature).push(model.modelId);
         }
         
-        // 转换为分组结构
+        // Convert to group structure
         customGroupingState.groups = [];
         let groupIndex = 1;
         for (const [signature, modelIds] of signatureMap) {
-            // 使用排序后的副本生成稳定的 groupId，保持 modelIds 原始顺序
+            // Generate stable groupId using sorted copy, keep modelIds original order
             const groupId = [...modelIds].sort().join('_');
             
-            // 尝试继承现有分组名称
-            // 优先使用组内模型之前的分组名称（按出现次数投票）
+            // Try to inherit existing group name
+            // Prioritize group name from models in group (vote by count)
             const nameVotes = {};
             for (const modelId of modelIds) {
                 const existingName = existingGroupNames[modelId];
@@ -1669,7 +1669,7 @@
                 }
             }
             
-            // 找出投票最多的名称
+            // Find most voted name
             let inheritedName = '';
             let maxVotes = 0;
             for (const [name, votes] of Object.entries(nameVotes)) {
@@ -1679,10 +1679,10 @@
                 }
             }
             
-            // 如果没有继承名称，使用备选方案
+            // If no inherited name, use fallback
             let groupName = inheritedName;
             if (!groupName) {
-                // 也尝试从 config 中读取
+                // Also try reading from config
                 const configGroupNames = currentConfig.groupCustomNames || {};
                 for (const modelId of modelIds) {
                     if (configGroupNames[modelId]) {
@@ -1692,7 +1692,7 @@
                 }
             }
             
-            // 最终备选：单模型用模型名，多模型用 Group N
+            // Final fallback: model name for single model, Group N for multiple
             if (!groupName) {
                 const firstModel = models.find(m => m.modelId === modelIds[0]);
                 groupName = modelIds.length === 1 
@@ -1713,28 +1713,28 @@
     }
 
     function saveCustomGrouping() {
-        // 检查是否有空分组
+        // Check for empty groups
         const emptyGroups = customGroupingState.groups.filter(g => g.modelIds.length === 0);
         if (emptyGroups.length > 0) {
-            // 移除空分组
+            // Remove empty groups
             customGroupingState.groups = customGroupingState.groups.filter(g => g.modelIds.length > 0);
         }
         
-        // 构建新的 groupMappings
+        // Build new groupMappings
         const newMappings = {};
         const newGroupNames = {};
         
         for (const group of customGroupingState.groups) {
-            // 生成稳定的 groupId
+            // Generate stable groupId
             const stableGroupId = group.modelIds.sort().join('_');
             for (const modelId of group.modelIds) {
                 newMappings[modelId] = stableGroupId;
-                // 使用锚点共识机制保存分组名称
+                // Use anchor consensus mechanism to save group name
                 newGroupNames[modelId] = group.name;
             }
         }
         
-        // 发送到扩展保存
+        // Send to extension to save
         vscode.postMessage({
             command: 'saveCustomGrouping',
             customGroupMappings: newMappings,
@@ -1749,7 +1749,7 @@
     let isProfileExpanded = false;
 
     function renderUserProfile(userInfo) {
-        // 如果用户选择隐藏计划详情，直接返回不渲染
+        // If user chose to hide plan details, return without rendering
         if (isProfileHidden) {
             return;
         }
@@ -1850,7 +1850,7 @@
         if (maskBtn) {
             maskBtn.addEventListener('click', () => {
                 isDataMasked = !isDataMasked;
-                // 发送消息到扩展，持久化存储到配置
+                // Send message to extension, persist to config
                 vscode.postMessage({ command: 'updateDataMasked', dataMasked: isDataMasked });
             });
         }
@@ -1884,7 +1884,7 @@
         `;
     }
 
-    // ============ 富文本工具提示 ============
+    // ============ Rich Tooltip ============
 
     function initRichTooltip() {
         const tooltip = document.createElement('div');
@@ -1899,7 +1899,7 @@
                 activeTarget = target;
                 const html = target.getAttribute('data-tooltip-html');
                 
-                // 解码 HTML
+                // Decode HTML
                 const decodedHtml = decodeURIComponent(html);
                 
                 tooltip.innerHTML = decodedHtml;
@@ -1908,11 +1908,11 @@
                 const rect = target.getBoundingClientRect();
                 const tooltipRect = tooltip.getBoundingClientRect();
                 
-                // 计算位置：默认在下方，如果下方空间不足则在上方
+                // Calculate position: default bottom, if not enough space then top
                 let top = rect.bottom + 8;
                 let left = rect.left + (rect.width - tooltipRect.width) / 2;
                 
-                // 边界检查
+                // Boundary check
                 if (top + tooltipRect.height > window.innerHeight) {
                     top = rect.top - tooltipRect.height - 8;
                 }
@@ -1934,7 +1934,7 @@
             }
         });
         
-        // 滚动时隐藏
+        // Hide on scroll
         window.addEventListener('scroll', () => {
              if (activeTarget) {
                 activeTarget = null;
@@ -1953,13 +1953,13 @@
     }
 
     /**
-     * 解析模型能力，返回能力列表
+     * Parse model capabilities, return capability list
      */
     function getModelCapabilityList(model) {
         const caps = [];
         const mime = model.supportedMimeTypes || {};
         
-        // 1. 图片能力
+        // 1. Image Capability
         if (model.supportsImages || Object.keys(mime).some(k => k.startsWith('image/'))) {
             caps.push({
                 icon: '🖼️',
@@ -1967,7 +1967,7 @@
             });
         }
         
-        // 2. 文档能力
+        // 2. Document Capability
         if (mime['application/pdf'] || mime['text/plain'] || mime['application/rtf']) {
             caps.push({
                 icon: '📄',
@@ -1975,7 +1975,7 @@
             });
         }
         
-        // 3. 音视频能力
+        // 3. Audio/Video Capability
         if (Object.keys(mime).some(k => k.startsWith('video/') || k.startsWith('audio/'))) {
             caps.push({
                 icon: '🎬',
@@ -1987,7 +1987,7 @@
     }
 
     /**
-     * 生成能力 Tooltip HTML
+     * Generate Capability Tooltip HTML
      */
     function generateCapabilityTooltip(caps) {
         return caps.map(cap => 
@@ -2006,7 +2006,7 @@
         card.setAttribute('data-group-id', group.groupId);
         card.setAttribute('draggable', 'true');
 
-        // 绑定拖拽事件
+        // Bind Drag Events
         card.addEventListener('dragstart', handleDragStart, false);
         card.addEventListener('dragenter', handleDragEnter, false);
         card.addEventListener('dragover', handleDragOver, false);
@@ -2014,13 +2014,13 @@
         card.addEventListener('drop', handleDrop, false);
         card.addEventListener('dragend', handleDragEnd, false);
 
-        // 生成组内模型列表（带能力图标）
+        // Generate in-group model list (with capability icons)
         const modelList = group.models.map(m => {
             const caps = getModelCapabilityList(m);
             const tagHtml = m.tagTitle ? `<span class="tag-new">${m.tagTitle}</span>` : '';
             const recClass = m.isRecommended ? ' recommended' : '';
             
-            // 如果有能力，添加悬浮属性
+            // If has capabilities, add hover attributes
             let tooltipAttr = '';
             let capsIndicator = '';
             if (caps.length > 0) {
@@ -2069,7 +2069,7 @@
             </div>
         `;
         
-        // 绑定重命名按钮事件 - 打开模态框
+        // Bind rename button event - Open modal
         const renameBtn = card.querySelector('.rename-group-btn');
         if (renameBtn) {
             renameBtn.addEventListener('click', (e) => {
@@ -2082,7 +2082,7 @@
             });
         }
         
-        // 绑定 pin 开关事件
+        // Bind pin toggle event
         const pinToggle = card.querySelector('.group-pin-toggle');
         if (pinToggle) {
             pinToggle.addEventListener('change', (e) => {
@@ -2101,26 +2101,26 @@
         const color = getHealthColor(pct);
         const isPinned = pinnedModels.includes(model.modelId);
         
-        // 获取自定义名称，如果没有则使用原始 label
+        // Get custom name, use original label if none
         const displayName = (modelCustomNames && modelCustomNames[model.modelId]) || model.label;
         const originalLabel = model.label;
         
-        // 生成能力数据
+        // Generate capability data
         const caps = getModelCapabilityList(model);
         let capsIconHtml = '';
         let tooltipAttr = '';
         
-        // 如果有能力，生成标题栏图标，并设置 tooltip
+        // If has capabilities, generate title bar icon and set tooltip
         if (caps.length > 0) {
             const tooltipHtml = encodeURIComponent(generateCapabilityTooltip(caps));
             tooltipAttr = ` data-tooltip-html="${tooltipHtml}"`;
             capsIconHtml = `<span class="title-caps-trigger">✨</span>`;
         }
         
-        // 生成 New 标签
+        // Generate New tag
         const tagHtml = model.tagTitle ? `<span class="tag-new">${model.tagTitle}</span>` : '';
         
-        // 推荐模型高亮样式
+        // Recommended model highlight style
         const recommendedClass = model.isRecommended ? ' card-recommended' : '';
 
         const card = document.createElement('div');
@@ -2128,7 +2128,7 @@
         card.setAttribute('draggable', 'true');
         card.setAttribute('data-id', model.modelId);
 
-        // 绑定拖拽事件
+        // Bind Drag Events
         card.addEventListener('dragstart', handleDragStart, false);
         card.addEventListener('dragenter', handleDragEnter, false);
         card.addEventListener('dragover', handleDragOver, false);
@@ -2172,7 +2172,7 @@
             </div>
         `;
         
-        // 绑定重命名按钮事件
+        // Bind rename button event
         const renameBtn = card.querySelector('.rename-model-btn');
         if (renameBtn) {
             renameBtn.addEventListener('click', (e) => {
@@ -2184,9 +2184,9 @@
         dashboard.appendChild(card);
     }
 
-    // ============ 公告系统 ============
+    // ============ Announcement System ============
 
-    // 公告状态
+    // Announcement State
     let announcementState = {
         announcements: [],
         unreadIds: [],
@@ -2256,19 +2256,19 @@
             `;
         }).join('');
 
-        // 绑定点击事件
+        // Bind Click Events
         container.querySelectorAll('.announcement-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
                 const ann = announcements.find(a => a.id === id);
                 if (ann) {
-                    // 若未读，点击即标记已读
+                    // If unread, mark as read on click
                     if (announcementState.unreadIds.includes(id)) {
                         vscode.postMessage({
                             command: 'announcement.markAsRead',
                             id: id
                         });
-                        // 乐观更新本地状态
+                        // Optimistic update local state
                         announcementState.unreadIds = announcementState.unreadIds.filter(uid => uid !== id);
                         updateAnnouncementBadge();
                         item.classList.remove('unread');
@@ -2402,23 +2402,23 @@
         const bellBtn = document.getElementById('announcement-btn');
         
         if (modal && modalContent && bellBtn && !skipAnimation) {
-            // 获取铃铛按钮的位置
+            // Get bell button position
             const bellRect = bellBtn.getBoundingClientRect();
             const contentRect = modalContent.getBoundingClientRect();
             
-            // 计算目标位移
+            // Calculate target displacement
             const targetX = bellRect.left + bellRect.width / 2 - (contentRect.left + contentRect.width / 2);
             const targetY = bellRect.top + bellRect.height / 2 - (contentRect.top + contentRect.height / 2);
             
-            // 添加飞向铃铛的动画
+            // Add animation flying to bell
             modalContent.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
             modalContent.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.1)`;
             modalContent.style.opacity = '0';
             
-            // 铃铛抖动效果
+            // Bell shake effect
             bellBtn.classList.add('bell-shake');
             
-            // 动画结束后隐藏模态框并重置样式
+            // Hide modal and reset style after animation
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modalContent.style.transition = '';
@@ -2447,13 +2447,13 @@
         if (currentPopupAnnouncement && currentPopupAnnouncement.action) {
             const action = currentPopupAnnouncement.action;
             
-            // 先标记已读
+            // Mark as read first
             vscode.postMessage({ 
                 command: 'announcement.markAsRead', 
                 id: currentPopupAnnouncement.id 
             });
 
-            // 执行操作
+            // Execute action
             if (action.type === 'tab') {
                 switchToTab(action.target);
             } else if (action.type === 'url') {
@@ -2479,20 +2479,20 @@
         updateAnnouncementBadge();
         renderAnnouncementList();
         
-        // 检查是否需要弹出公告
+        // Check if auto popup is needed
         if (!hasAutoPopupChecked && state.popupAnnouncement) {
             hasAutoPopupChecked = true;
-            // 延迟弹出，等待页面渲染完成
+            // Delay popup, wait for page render
             setTimeout(() => {
                 showAnnouncementPopup(state.popupAnnouncement);
             }, 600);
         }
     }
 
-    // ============ 图片预览 ============
+    // ============ Image Preview ============
     
     function showImagePreview(imageUrl) {
-        // 创建预览遮罩
+        // Create preview overlay
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
         overlay.innerHTML = `
@@ -2502,7 +2502,7 @@
             </div>
         `;
         
-        // 点击关闭
+        // Click to close
         overlay.addEventListener('click', () => {
             overlay.classList.add('closing');
             setTimeout(() => overlay.remove(), 200);
@@ -2510,14 +2510,14 @@
         
         document.body.appendChild(overlay);
         
-        // 触发动画
+        // Trigger animation
         requestAnimationFrame(() => overlay.classList.add('visible'));
     }
     
-    // 暴露到 window 供 onclick 调用
+    // Expose to window for onclick call
     window.showImagePreview = showImagePreview;
 
-    // ============ 启动 ============
+    // ============ Startup ============
 
     init();
 

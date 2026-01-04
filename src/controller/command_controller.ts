@@ -21,7 +21,7 @@ export class CommandController {
     }
 
     private registerCommands(): void {
-        // 打开 Dashboard
+        // Open Dashboard
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.open', async (options?: { tab?: string }) => {
                 const config = configService.getConfig();
@@ -30,7 +30,7 @@ export class CommandController {
                 } else {
                     const success = await this.hud.revealHud(options?.tab);
                     if (!success) {
-                        // Webview 创建失败，引导用户切换到 QuickPick 模式
+                        // Webview creation failed, guide user to switch to QuickPick mode
                         const selection = await vscode.window.showWarningMessage(
                             t('webview.failedPrompt'),
                             t('webview.switchToQuickPick'),
@@ -47,7 +47,7 @@ export class CommandController {
             }),
         );
 
-        // 手动刷新
+        // Manual Refresh
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.refresh', () => {
                 this.reactor.syncTelemetry();
@@ -55,28 +55,28 @@ export class CommandController {
             }),
         );
 
-        // 显示日志
+        // Show Logs
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.showLogs', () => {
                 logger.show();
             }),
         );
 
-        // 重试连接
+        // Retry Connection
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.retry', async () => {
                 await this.onRetry();
             }),
         );
 
-        // 打开反馈页面
+        // Open Feedback Page
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.openFeedback', () => {
                 vscode.env.openExternal(vscode.Uri.parse(FEEDBACK_URL));
             }),
         );
 
-        // 设置警告阈值
+        // Set Warning Threshold
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.setWarningThreshold', async () => {
                 const config = configService.getConfig();
@@ -104,7 +104,7 @@ export class CommandController {
             }),
         );
 
-        // 设置危险阈值
+        // Set Critical Threshold
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.setCriticalThreshold', async () => {
                 const config = configService.getConfig();
@@ -132,7 +132,7 @@ export class CommandController {
             }),
         );
 
-        // 强制刷新公告
+        // Force Refresh Announcements
         this.context.subscriptions.push(
             vscode.commands.registerCommand('agCockpit.refreshAnnouncements', async () => {
                 try {
@@ -140,7 +140,7 @@ export class CommandController {
                     vscode.window.showInformationMessage(
                         t('announcement.refreshed').replace('{count}', String(state.announcements.length)),
                     );
-                    // 更新 HUD 中的公告状态
+                    // Update Announcement State in HUD
                     this.hud.sendMessage({
                         type: 'announcementState',
                         data: state,

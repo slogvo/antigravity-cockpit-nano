@@ -1,116 +1,116 @@
 /**
- * Antigravity Cockpit - 类型定义
- * 完整的类型系统，避免使用 any
+ * Antigravity Cockpit - Type Definitions
+ * Complete type system to avoid using any
  */
 
-// ============ 配额相关类型 ============
+// ============ Quota Types ============
 
-/** Prompt Credits 信息 */
+/** Prompt Credits Info */
 export interface PromptCreditsInfo {
-    /** 可用积分 */
+    /** Available credits */
     available: number;
-    /** 每月配额 */
+    /** Monthly quota */
     monthly: number;
-    /** 已使用百分比 */
+    /** Used percentage */
     usedPercentage: number;
-    /** 剩余百分比 */
+    /** Remaining percentage */
     remainingPercentage: number;
 }
 
-/** 模型配额信息 */
+/** Model Quota Info */
 export interface ModelQuotaInfo {
-    /** 显示标签 */
+    /** Display label */
     label: string;
-    /** 模型 ID */
+    /** Model ID */
     modelId: string;
-    /** 剩余比例 (0-1) */
+    /** Remaining fraction (0-1) */
     remainingFraction?: number;
-    /** 剩余百分比 (0-100) */
+    /** Remaining percentage (0-100) */
     remainingPercentage?: number;
-    /** 是否已耗尽 */
+    /** Is exhausted */
     isExhausted: boolean;
-    /** 重置时间 */
+    /** Reset time */
     resetTime: Date;
-    /** 距离重置的毫秒数 */
+    /** Time until reset in ms */
     timeUntilReset: number;
-    /** 格式化的重置倒计时 */
+    /** Formatted reset countdown */
     timeUntilResetFormatted: string;
-    /** 格式化的重置时间显示 */
+    /** Formatted reset time display */
     resetTimeDisplay: string;
-    /** 是否支持图片输入 */
+    /** Whether supports image input */
     supportsImages?: boolean;
-    /** 是否为推荐模型 */
+    /** Whether is recommended */
     isRecommended?: boolean;
-    /** 标签标题（如 "New"） */
+    /** Tag title (e.g., "New") */
     tagTitle?: string;
-    /** 支持的 MIME 类型映射 */
+    /** Supported MIME types map */
     supportedMimeTypes?: Record<string, boolean>;
 }
 
-/** 配额分组 - 共享相同配额的模型集合 */
+/** Quota Group - Collection of models sharing the same quota */
 export interface QuotaGroup {
-    /** 分组唯一标识 (基于 remainingFraction + resetTime 生成) */
+    /** Group unique ID (generated based on remainingFraction + resetTime) */
     groupId: string;
-    /** 分组名称 (用户自定义或自动生成) */
+    /** Group name (user defined or auto generated) */
     groupName: string;
-    /** 分组内的模型列表 */
+    /** Properties of models in the group */
     models: ModelQuotaInfo[];
-    /** 共享的剩余百分比 */
+    /** Shared remaining percentage */
     remainingPercentage: number;
-    /** 共享的重置时间 */
+    /** Shared reset time */
     resetTime: Date;
-    /** 格式化的重置时间显示 */
+    /** Formatted reset time display */
     resetTimeDisplay: string;
-    /** 格式化的重置倒计时 */
+    /** Formatted reset countdown */
     timeUntilResetFormatted: string;
-    /** 是否已耗尽 */
+    /** Is exhausted */
     isExhausted: boolean;
 }
 
-/** 配额快照 */
+/** Quota Snapshot */
 export interface QuotaSnapshot {
-    /** 时间戳 */
+    /** Timestamp */
     timestamp: Date;
     /** Prompt Credits */
     promptCredits?: PromptCreditsInfo;
-    /** 用户信息 */
+    /** User Info */
     userInfo?: UserInfo;
-    /** 模型列表 */
+    /** Model List */
     models: ModelQuotaInfo[];
-    /** 配额分组 (开启分组功能时生成) */
+    /** Quota Groups (generated when grouping is enabled) */
     groups?: QuotaGroup[];
-    /** 连接状态 */
+    /** Connection Status */
     isConnected: boolean;
-    /** 错误信息 */
+    /** Error Message */
     errorMessage?: string;
 }
 
-/** 配额健康状态 */
+/** Quota Health Level */
 export enum QuotaLevel {
-    /** 正常 (> 50%) */
+    /** Normal (> 50%) */
     Normal = 'normal',
-    /** 警告 (20-50%) */
+    /** Warning (20-50%) */
     Warning = 'warning',
-    /** 危险 (< 20%) */
+    /** Critical (< 20%) */
     Critical = 'critical',
-    /** 已耗尽 (0%) */
+    /** Depleted (0%) */
     Depleted = 'depleted',
 }
 
-// ============ API 响应类型 ============
+// ============ API Response Types ============
 
-/** 模型或别名 */
+/** Model or Alias */
 export interface ModelOrAlias {
     model: string;
 }
 
-/** 配额信息 */
+/** Quota Info */
 export interface QuotaInfo {
     remainingFraction?: number;
     resetTime: string;
 }
 
-/** 客户端模型配置 */
+/** Client Model Config */
 export interface ClientModelConfig {
     label: string;
     modelOrAlias?: ModelOrAlias;
@@ -118,13 +118,13 @@ export interface ClientModelConfig {
     supportsImages?: boolean;
     isRecommended?: boolean;
     allowedTiers?: string[];
-    /** 标签标题（如 "New"） */
+    /** Tag title (e.g., "New") */
     tagTitle?: string;
-    /** 支持的 MIME 类型映射 */
+    /** Supported MIME types map */
     supportedMimeTypes?: Record<string, boolean>;
 }
 
-/** 团队配置 */
+/** Team Config */
 export interface DefaultTeamConfig {
     allowMcpServers?: boolean;
     allowAutoRunCommands?: boolean;
@@ -132,14 +132,14 @@ export interface DefaultTeamConfig {
     [key: string]: boolean | string | number | undefined;
 }
 
-/** 计划信息 */
+/** Plan Info */
 export interface PlanInfo {
     teamsTier: string;
     planName: string;
     monthlyPromptCredits: number;
     monthlyFlowCredits: number;
     
-    // 功能开关
+    // Feature Flags
     browserEnabled?: boolean;
     knowledgeBaseEnabled?: boolean;
     canBuyMoreCredits?: boolean;
@@ -153,7 +153,7 @@ export interface PlanInfo {
     cascadeCanAutoRunCommands?: boolean;
     canAllowCascadeInBackground?: boolean;
     
-    // 限制配置
+    // Limit Config
     maxNumChatInputTokens?: string | number;
     maxNumPremiumChatMessages?: string | number;
     maxCustomChatInstructionCharacters?: string | number;
@@ -161,38 +161,38 @@ export interface PlanInfo {
     maxLocalIndexSize?: string | number;
     monthlyFlexCreditPurchaseAmount?: number;
     
-    // 团队配置
+    // Team Config
     defaultTeamConfig?: DefaultTeamConfig;
     
-    /** 扩展字段 - 支持 API 返回的其他属性 */
+    /** Extended Fields - Support other properties returned by API */
     [key: string]: string | number | boolean | object | undefined;
 }
 
-/** 计划状态 */
+/** Plan Status */
 export interface PlanStatus {
     planInfo: PlanInfo;
     availablePromptCredits: number;
     availableFlowCredits: number;
 }
 
-/** 模型排序分组 */
+/** Model Sort Group */
 export interface ModelSortGroup {
     modelLabels: string[];
 }
 
-/** 客户端模型排序 */
+/** Client Model Sort */
 export interface ClientModelSort {
     name: string;
     groups: ModelSortGroup[];
 }
 
-/** Cascade 模型配置数据 */
+/** Cascade Model Config Data */
 export interface CascadeModelConfigData {
     clientModelConfigs: ClientModelConfig[];
     clientModelSorts?: ClientModelSort[];
 }
 
-/** 用户状态 */
+/** User Status */
 export interface UserStatus {
     name: string;
     email: string;
@@ -208,56 +208,56 @@ export interface UserStatus {
     };
 }
 
-/** 服务端用户状态响应 */
+/** Server User Status Response */
 export interface ServerUserStatusResponse {
     userStatus: UserStatus;
-    /** 服务端返回的错误消息 */
+    /** Error message returned by server */
     message?: string;
-    /** 服务端返回的错误代码 */
+    /** Error code returned by server */
     code?: string;
 }
 
-// ============ 进程检测类型 ============
+// ============ Process Detection Types ============
 
-/** 环境扫描结果 */
+/** Environment Scan Result */
 export interface EnvironmentScanResult {
-    /** 扩展端口 */
+    /** Extension Port */
     extensionPort: number;
-    /** 连接端口 */
+    /** Connect Port */
     connectPort: number;
     /** CSRF Token */
     csrfToken: string;
 }
 
-/** 扫描诊断信息 */
+/** Scan Diagnostics */
 export interface ScanDiagnostics {
-    /** 扫描方式 */
+    /** Scan Method */
     scan_method: 'process_name' | 'keyword' | 'unknown';
-    /** 目标进程名 */
+    /** Target Process Name */
     target_process: string;
-    /** 扫描尝试次数 */
+    /** Scan Attempts */
     attempts: number;
-    /** 候选进程数量 */
+    /** Found Candidates Count */
     found_candidates: number;
-    /** 候选端口列表 */
+    /** Candidate Ports */
     ports?: number[];
-    /** 通过验证的端口 */
+    /** Verified Port */
     verified_port?: number | null;
-    /** 是否验证成功 */
+    /** Verification Success */
     verification_success?: boolean;
 }
 
-/** 进程信息 */
+/** Process Info */
 export interface ProcessInfo {
-    /** 进程 ID */
+    /** Process ID */
     pid: number;
-    /** 扩展端口 */
+    /** Extension Port */
     extensionPort: number;
     /** CSRF Token */
     csrfToken: string;
 }
 
-/** 用户详细信息 */
+/** User Info */
 export interface UserInfo {
     name: string;
     email: string;
@@ -297,9 +297,9 @@ export interface UserInfo {
     userTierId: string;
 }
 
-// ============ UI 相关类型 ============
+// ============ UI Related Types ============
 
-/** Webview 消息类型 */
+/** Webview Message Types */
 export type WebviewMessageType = 
     | 'init'
     | 'refresh'
@@ -347,58 +347,58 @@ export type WebviewMessageType =
     | 'openUrl'
     | 'executeCommand';
 
-/** Webview 消息 */
+/** Webview Message */
 export interface WebviewMessage {
     command: WebviewMessageType;
     modelId?: string;
     order?: string[];
-    /** 分组 ID */
+    /** Group ID */
     groupId?: string;
-    /** 分组新名称 */
+    /** New Group Name */
     groupName?: string;
-    /** 分组当前名称 (用于 promptRenameGroup) */
+    /** Current Group Name (for promptRenameGroup) */
     currentName?: string;
-    /** 分组内所有模型 ID */
+    /** All Model IDs in Group */
     modelIds?: string[];
-    /** 是否启用通知 (updateThresholds) */
+    /** Enable Notification (updateThresholds) */
     notificationEnabled?: boolean;
-    /** 警告阈值 (updateThresholds) */
+    /** Warning Threshold (updateThresholds) */
     warningThreshold?: number;
-    /** 危险阈值 (updateThresholds) */
+    /** Critical Threshold (updateThresholds) */
     criticalThreshold?: number;
-    /** 状态栏显示格式 (updateStatusBarFormat) */
+    /** Status Bar Format (updateStatusBarFormat) */
     statusBarFormat?: string;
-    /** 视图模式 (updateViewMode) */
+    /** View Mode (updateViewMode) */
     viewMode?: string;
-    /** 显示模式 (updateDisplayMode) */
+    /** Display Mode (updateDisplayMode) */
     displayMode?: 'webview' | 'quickpick';
-    /** 数据遮罩状态 (updateDataMasked) */
+    /** Data Masked Status (updateDataMasked) */
     dataMasked?: boolean;
-    /** 自定义分组映射 (saveCustomGrouping) */
+    /** Custom Group Mappings (saveCustomGrouping) */
     customGroupMappings?: Record<string, string>;
-    /** 自定义分组名称 (saveCustomGrouping) */
+    /** Custom Group Names (saveCustomGrouping) */
     customGroupNames?: Record<string, string>;
     // Auto Trigger
-    /** Tab 名称 (tabChanged) */
+    /** Tab Name (tabChanged) */
     tab?: string;
-    /** 调度配置 (autoTrigger.saveSchedule) */
+    /** Schedule Config (autoTrigger.saveSchedule) */
     schedule?: ScheduleConfig;
-    /** Crontab 表达式 (autoTrigger.validateCrontab) */
+    /** Crontab Expression (autoTrigger.validateCrontab) */
     crontab?: string;
-    /** 手动测试模型列表 (autoTrigger.test) */
+    /** Manual Test Model List (autoTrigger.test) */
     models?: string[];
     // Announcements
-    /** 公告 ID (announcement.markAsRead) */
+    /** Announcement ID (announcement.markAsRead) */
     id?: string;
     /** URL (openUrl) */
     url?: string;
-    /** 命令 ID (executeCommand) */
+    /** Command ID (executeCommand) */
     commandId?: string;
-    /** 命令参数 (executeCommand) */
+    /** Command Arguments (executeCommand) */
     commandArgs?: unknown[];
 }
 
-/** 调度配置 */
+/** Schedule Config */
 export interface ScheduleConfig {
     enabled: boolean;
     repeatMode: 'daily' | 'weekly' | 'interval';
@@ -412,82 +412,82 @@ export interface ScheduleConfig {
     selectedModels: string[];
 }
 
-/** Dashboard 配置 */
+/** Dashboard Config */
 export interface DashboardConfig {
-    /** 是否显示 Prompt Credits */
+    /** Show Prompt Credits */
     showPromptCredits: boolean;
-    /** 置顶的模型 */
+    /** Pinned Models */
     pinnedModels: string[];
-    /** 模型顺序 */
+    /** Model Order */
     modelOrder: string[];
-    /** 模型自定义名称映射 (modelId -> displayName) */
+    /** Model Custom Names Map (modelId -> displayName) */
     modelCustomNames?: Record<string, string>;
-    /** 是否启用分组显示 */
+    /** Enable Grouping */
     groupingEnabled: boolean;
-    /** 分组自定义名称映射 (modelId -> groupName) */
+    /** Group Custom Names Map (modelId -> groupName) */
     groupCustomNames: Record<string, string>;
-    /** 是否在状态栏显示分组 */
+    /** Show Groups in Status Bar */
     groupingShowInStatusBar: boolean;
-    /** 置顶的分组 */
+    /** Pinned Groups */
     pinnedGroups: string[];
-    /** 分组顺序 */
+    /** Group Order */
     groupOrder: string[];
-    /** 刷新冷却时间（秒） */
+    /** Refresh Interval (seconds) */
     refreshInterval: number;
-    /** 是否启用通知 */
+    /** Enable Notifications */
     notificationEnabled: boolean;
-    /** 警告阈值 (%) */
+    /** Warning Threshold (%) */
     warningThreshold?: number;
-    /** 危险阈值 (%) */
+    /** Critical Threshold (%) */
     criticalThreshold?: number;
-    /** 最后成功更新时间 */
+    /** Last Successful Update Time */
     lastSuccessfulUpdate?: Date | null;
-    /** 状态栏显示格式 */
+    /** Status Bar Format */
     statusBarFormat?: string;
-    /** 是否隐藏计划详情面板 */
+    /** Hide Plan Details Panel */
     profileHidden?: boolean;
-    /** 视图模式 (card | list) */
+    /** View Mode (card | list) */
     viewMode?: string;
-    /** 显示模式 (webview | quickpick) */
+    /** Display Mode (webview | quickpick) */
     displayMode?: string;
-    /** 是否遮罩敏感数据 */
+    /** Mask Sensitive Data */
     dataMasked?: boolean;
     /** External URL */
     url?: string;
-    /** 分组映射 (modelId -> groupId) */
+    /** Group Mappings (modelId -> groupId) */
     groupMappings?: Record<string, string>;
 }
 
-/** 状态栏更新数据 */
+/** Status Bar Update Data */
 export interface StatusBarUpdate {
-    /** 显示文本 */
+    /** Display Text */
     text: string;
-    /** 工具提示 */
+    /** Tooltip */
     tooltip: string;
-    /** 背景颜色 */
+    /** Background Color */
     backgroundColor?: string;
-    /** 最低百分比（用于颜色判断） */
+    /** Min Percentage (for color judgment) */
     minPercentage: number;
 }
 
-// ============ 平台策略类型 ============
+// ============ Platform Strategy Types ============
 
-/** 平台类型 */
+/** Platform Type */
 export type PlatformType = 'windows' | 'darwin' | 'linux';
 
-/** 平台策略接口 */
+/** Platform Strategy Interface */
 export interface PlatformStrategy {
-    /** 获取进程列表命令 */
+    /** Get process list command */
     getProcessListCommand(processName: string): string;
-    /** 解析进程信息 */
+    /** Parse process info */
     parseProcessInfo(stdout: string): ProcessInfo[];
-    /** 获取端口列表命令 */
+    /** Get port list command */
     getPortListCommand(pid: number): string;
-    /** 解析监听端口 */
+    /** Parse listening ports */
     parseListeningPorts(stdout: string): number[];
-    /** 获取诊断命令（列出所有相关进程，用于调试） */
+    /** Get diagnostic command (list all related processes for debugging) */
     getDiagnosticCommand(): string;
-    /** 获取错误信息 */
+    /** Get error messages */
     getErrorMessages(): {
         processNotFound: string;
         commandNotAvailable: string;
@@ -495,22 +495,22 @@ export interface PlatformStrategy {
     };
 }
 
-// ============ 遗留类型别名（向后兼容） ============
+// ============ Legacy Type Aliases (Backward Compatibility) ============
 
-/** @deprecated 使用 ModelQuotaInfo */
+/** @deprecated Use ModelQuotaInfo */
 export type model_quota_info = ModelQuotaInfo;
 
-/** @deprecated 使用 PromptCreditsInfo */
+/** @deprecated Use PromptCreditsInfo */
 export type prompt_credits_info = PromptCreditsInfo;
 
-/** @deprecated 使用 QuotaSnapshot */
+/** @deprecated Use QuotaSnapshot */
 export type quota_snapshot = QuotaSnapshot;
 
-/** @deprecated 使用 QuotaLevel */
+/** @deprecated Use QuotaLevel */
 export const quota_level = QuotaLevel;
 
-/** @deprecated 使用 ServerUserStatusResponse */
+/** @deprecated Use ServerUserStatusResponse */
 export type server_user_status_response = ServerUserStatusResponse;
 
-/** @deprecated 使用 EnvironmentScanResult */
+/** @deprecated Use EnvironmentScanResult */
 export type environment_scan_result = EnvironmentScanResult;

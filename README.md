@@ -1,11 +1,13 @@
-# Antigravity Cockpit Nano
+# Nano
 
 [English](README.md) · [Tiếng Việt](#tiếng-việt-vietnamese)
 
 [![Version](https://img.shields.io/open-vsx/v/slogvo/antigravity-cockpit-nano)](https://open-vsx.org/extension/slogvo/antigravity-cockpit-nano)
 [![License](https://img.shields.io/github/license/slogvo/antigravity-cockpit-nano)](https://github.com/slogvo/antigravity-cockpit-nano)
 
-**Antigravity Cockpit Nano** is a lightweight VS Code extension for monitoring your Google Antigravity AI credentials and quota.
+**Nano** is a lightweight VS Code extension for monitoring your Google Antigravity AI credentials and quota.
+
+> **Credits**: This project is derived from **Antigravity Cockpit** by [jlcodes99](https://github.com/jlcodes99). We respectfully acknowledge the original author's work. This repo (Nano) is created with goodwill to provide a lightweight alternative.
 
 **Features**: Webview Dashboard · QuickPick Mode · Quota Grouping · Status Bar Monitor · Threshold Notifications · Auto Wake-up
 
@@ -56,7 +58,9 @@ Install via VS Code Marketplace or Open VSX Registry.
 
 ## Tiếng Việt (Vietnamese)
 
-**Antigravity Cockpit Nano** là tiện ích mở rộng giúp bạn theo dõi hạn ngạch (quota) của AI Google Antigravity ngay trong VS Code.
+**Nano** là tiện ích mở rộng giúp bạn theo dõi hạn ngạch (quota) của AI Google Antigravity ngay trong VS Code.
+
+> **Ghi nhận**: Dự án này được phát triển dựa trên **Antigravity Cockpit** của [jlcodes99](https://github.com/jlcodes99). Chúng tôi tôn trọng bản quyền và chất xám của tác giả. Repo này (Nano) được tạo ra với thiện chí cung cấp một phiên bản nhẹ nhàng hơn.
 
 **Tính năng chính**:
 
