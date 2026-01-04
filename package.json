@@ -1,16 +1,18 @@
 {
-    "name": "vscode-nano",
-    "displayName": "Nano",
+    "name": "antigravity-cockpit-nano",
+    "displayName": "Antigravity Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
     "version": "1.0.4",
-    "publisher": "slogvo",
+    "publisher": "antigravity-cockpit-nano",
     "engines": {
         "vscode": "^1.90.0"
     },
+    "license": "MIT",
     "categories": [
-        "Other",
-        "Visualization"
+        "AI",
+        "Visualization",
+        "Other"
     ],
     "keywords": [
         "antigravity",
@@ -24,6 +26,7 @@
         "type": "git",
         "url": "https://github.com/slogvo/antigravity-cockpit-nano.git"
     },
+    "homepage": "https://github.com/slogvo/antigravity-cockpit-nano",
     "activationEvents": [
         "onStartupFinished"
     ],
