@@ -3,7 +3,7 @@
     "displayName": "Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "publisher": "slogvo",
     "engines": {
         "vscode": "^1.90.0"
