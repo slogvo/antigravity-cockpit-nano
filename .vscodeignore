@@ -1,0 +1,44 @@
+# Exclude development environments
+.vscode/**
+.vscode-test/**
+.claude/**
+scripts/**
+tmp/**
+
+# Exclude source code and maps
+src/**
+out/**/*.map
+out/**/*.d.ts
+
+# Exclude configuration files
+.gitignore
+.eslintrc.json
+.eslintrc.js
+.prettierrc
+.editorconfig
+tsconfig.json
+package-lock.json
+jest.config.js
+.env.local
+
+# Exclude docs directory and full announcement source
+docs/**
+announcements_full.json
+
+# Exclude specific assets (KEEP icon.png)
+assets/*
+!assets/icon.png
+
+# Exclude OS-specific files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Exclude local build artifacts
+*.vsix
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Exclude node_modules (dependencies are bundled by esbuild)
+node_modules/**
