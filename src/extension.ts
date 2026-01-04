@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     reactor = new ReactorCore();
     statusBar = new StatusBarController(context);
 
-    // Register Nano Command
+    // Register Nano Commands
     context.subscriptions.push(
         vscode.commands.registerCommand('antigravity.openNano', () => {
             NanoPanel.createOrShow(context.extensionUri);
@@ -58,6 +58,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             if (reactor.lastSnapshot) {
                 NanoPanel.currentPanel?.update(reactor.lastSnapshot);
             }
+        }),
+        vscode.commands.registerCommand('antigravity.refreshNano', () => {
+            logger.info('User triggered manual refresh from Nano');
+            reactor.syncTelemetry();
         })
     );
 

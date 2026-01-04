@@ -3,7 +3,7 @@
     "displayName": "Antigravity Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
-    "version": "1.0.6",
+    "version": "1.0.11",
     "publisher": "antigravity-cockpit-nano",
     "publisherDisplayName": "Antigravity Cockpit Nano",
     "engines": {
@@ -36,7 +36,12 @@
         "commands": [
             {
                 "command": "antigravity.openNano",
-                "title": "Open Antigravity Nano",
+                "title": "Open Antigravity Nano Monitor",
+                "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.refreshNano",
+                "title": "Refresh Quota Data",
                 "category": "Antigravity"
             }
         ],

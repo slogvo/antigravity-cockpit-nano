@@ -22,6 +22,19 @@ export class NanoPanel {
 
         // Listen for when the panel is disposed
         this.panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this.panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'refresh':
+                        vscode.commands.executeCommand('antigravity.refreshNano');
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
     }
 
     public static createOrShow(extensionUri: vscode.Uri) {
@@ -112,10 +125,10 @@ export class NanoPanel {
             max-width: 980px;
         }
 
-        .top-header {
+        .main-container {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 24px;
             margin-bottom: 32px;
         }
 
@@ -128,28 +141,76 @@ export class NanoPanel {
             color: #ffffff;
         }
 
-        .clock {
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-variant-numeric: tabular-nums;
-        }
-
-        .user-section {
-            padding: 0;
-            margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-        }
-
-        .user-email {
+        .user-info {
             font-size: 16px;
             font-weight: 400;
             color: #f8fafc;
+            display: flex;
+            align-items: center;
         }
-        .user-email .label {
+        .user-info .label {
             color: var(--text-secondary);
             margin-right: 8px;
             font-size: 14px;
+        }
+
+        .refresh-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            outline: none;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            height: 32px;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .refresh-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .refresh-btn.loading svg {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .refresh-hint {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .refresh-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-yellow);
+            margin-left: 4px;
         }
 
         .grid {
@@ -267,19 +328,29 @@ export class NanoPanel {
 </head>
 <body>
     <div id="app">
-        <header class="top-header">
+        <div class="main-container">
             <div class="title-group">
                 <h1>ANTIGRAVITY COCKPIT NANO MONITOR</h1>
             </div>
-            <div class="clock" id="clock">00:00:00</div>
-        </header>
 
-        <section class="user-section">
-            <div class="user-email">
+            <div class="user-info">
                 <span class="label">Logged in as:</span>
                 <span id="email-text">Loading user profile...</span>
             </div>
-        </section>
+
+            <div class="refresh-row">
+                <button id="refresh-btn" class="refresh-btn" title="Refresh Quota">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 4v6h-6"></path>
+                        <path d="M1 20v-6h6"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <span>REFRESH</span>
+                    <span class="refresh-label"></span>
+                </button>
+                <div class="refresh-hint">Update latest quota from API</div>
+            </div>
+        </div>
 
         <main id="model-container" class="grid"></main>
 
@@ -306,15 +377,48 @@ export class NanoPanel {
             return null;
         }
 
-        setInterval(() => {
-            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
-        }, 1000);
+
+        // Refresh Logic
+        const refreshBtn = document.getElementById('refresh-btn');
+        let refreshCooldown = 0;
+
+        refreshBtn.addEventListener('click', () => {
+            if (refreshCooldown > 0) return;
+
+            // Start spinning
+            refreshBtn.classList.add('loading');
+            
+            // Send refresh signal
+            vscode.postMessage({ command: 'refresh' });
+
+            // Start cooldown (60 seconds)
+            refreshCooldown = 60;
+            updateRefreshUI();
+        });
+
+        function updateRefreshUI() {
+            const label = refreshBtn.querySelector('.refresh-label');
+            if (refreshCooldown > 0) {
+                refreshBtn.disabled = true;
+                refreshBtn.style.opacity = "0.7";
+                label.textContent = \`(\${refreshCooldown}s)\`;
+                refreshCooldown--;
+                setTimeout(updateRefreshUI, 1000);
+            } else {
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = "1";
+                refreshBtn.classList.remove('loading');
+                label.textContent = '';
+            }
+        }
 
         window.addEventListener('message', event => {
             const message = event.data;
             if (message.type === 'update') {
                 currentSnapshot = message.data;
                 render();
+                // Stop spinning when we get an update
+                refreshBtn.classList.remove('loading');
             }
         });
 
