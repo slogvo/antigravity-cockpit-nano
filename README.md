@@ -1,104 +1,76 @@
-# Nano
+# ANTIGRAVITY COCKPIT NANO MONITOR
 
 [English](README.md) · [Tiếng Việt](#tiếng-việt-vietnamese)
 
-[![Version](https://img.shields.io/open-vsx/v/slogvo/antigravity-cockpit-nano)](https://open-vsx.org/extension/slogvo/antigravity-cockpit-nano)
-[![License](https://img.shields.io/github/license/slogvo/antigravity-cockpit-nano)](https://github.com/slogvo/antigravity-cockpit-nano)
+**Antigravity Cockpit Nano Monitor** is a minimalist version that helps you monitor AI quota directly within VS Code/Antigravity. It allows users to focus purely on Quota in a visual and easy-to-use manner.
 
-**Nano** is a lightweight VS Code extension for monitoring your Google Antigravity AI credentials and quota.
-
-> **Credits**: This project is derived from **Antigravity Cockpit** by [jlcodes99](https://github.com/jlcodes99). We respectfully acknowledge the original author's work. This repo (Nano) is created with goodwill to provide a lightweight alternative.
-
-**Features**: Webview Dashboard · QuickPick Mode · Quota Grouping · Status Bar Monitor · Threshold Notifications · Auto Wake-up
-
-**Languages**: English, Vietnamese 🇻🇳
+> **Philosophy**: "One command. One small panel. No bloat. Just Quota."
 
 ---
 
 ## English
 
-### Features
+### Key Features
 
 #### Dashboard
 
-Two display modes available in settings (`agCockpit.displayMode`):
+Displays all essential information clearly:
 
-1.  **Webview Dashboard**: Full UI with cards or list view.
-2.  **QuickPick Mode**: Lightweight menu for keyboard users or restricted environments.
+-   **User Email**: Easily identify which Google account is currently in use.
+-   **Real-time Quota**: Track remaining percentage with dynamic, color-coded progress bars.
+-   **Reset Timing**: Precise countdown to when your quota will be restored.
 
 #### Status Bar
 
-Monitors quota remaining. Supports 6 formats:
+Monitor status quickly without opening any panels:
 
--   Icon Only: `🚀`
--   Dot: `🟢`
--   Standard (Default): `🟢 Sonnet: 95%`
+-   **Flexible Formats**: Display as icons, percentages, or full labels.
+-   **Quick Access**: Click the status bar entry to launch the Dashboard instantly.
 
-#### Auto Wake-up
+### Commands & Shortcuts
 
-Schedule automated requests to "wake up" the model and trigger the quota reset cycle in advance.
-
--   **Flexible Scheduling**: Daily, Weekly, or Advanced Crontab.
--   **Secure**: Credentials stored in VS Code Secret Storage.
-
-### Installation
-
-Install via VS Code Marketplace or Open VSX Registry.
-
-### Configuration
-
-| Setting                      | Default    | Description                     |
-| :--------------------------- | :--------- | :------------------------------ |
-| `agCockpit.refreshInterval`  | `120`      | Refresh interval in seconds.    |
-| `agCockpit.displayMode`      | `webview`  | `webview` or `quickpick`.       |
-| `agCockpit.statusBarFormat`  | `standard` | Format of status bar text.      |
-| `agCockpit.warningThreshold` | `30`       | % remaining to trigger warning. |
+| Action        | Command                              | Shortcut       |
+| :------------ | :----------------------------------- | :------------- |
+| **Open Nano** | `Antigravity: Open Antigravity Nano` | `Ctrl+Shift+Q` |
 
 ---
 
 ## Tiếng Việt (Vietnamese)
 
-**Nano** là tiện ích mở rộng giúp bạn theo dõi hạn ngạch (quota) của AI Google Antigravity ngay trong VS Code.
+**Antigravity Cockpit Nano Monitor** là phiên bản tối giản giúp bạn theo dõi hạn ngạch (quota) AI ngay trên VS Code/Antigravity, .... Giúp người dùng chỉ cần tập trung vào Quota một cách trực quan và dễ dàng
 
-> **Ghi nhận**: Dự án này được phát triển dựa trên **Antigravity Cockpit** của [jlcodes99](https://github.com/jlcodes99). Chúng tôi tôn trọng bản quyền và chất xám của tác giả. Repo này (Nano) được tạo ra với thiện chí cung cấp một phiên bản nhẹ nhàng hơn.
+### Tính năng chính
 
-**Tính năng chính**:
+#### Dashboard
 
--   📊 **Dashboard trực quan**: Xem dung lượng còn lại, giờ reset.
--   🚀 **Theo dõi Status Bar**: Hiển thị % còn lại ngay dưới chân màn hình.
--   ⏰ **Auto Wake-up (Tự động gọi)**: Tự động gửi request để kích hoạt chu kỳ reset quota sớm.
--   📁 **Gộp nhóm**: Tự động gộp các model dùng chung quota.
+Hiển thị toàn bộ thông tin quan trọng:
 
-### Cài đặt
+-   **Email người dùng**: Giúp người dùng biết được đang sử dụng tài khoản google nào.
+-   **Quota Thời Gian Thực**: Theo dõi % còn lại với thanh trạng thái đổi màu linh hoạt.
+-   **Thời gian Reset**: Đếm ngược chính xác thời điểm hồi phục hạn ngạch.
 
-Tìm kiếm `Antigravity Cockpit Nano` trên Marketplace và nhấn Install.
+#### Thanh trạng thái (Status Bar)
 
-### Sử dụng
+Theo dõi trạng thái nhanh mà không cần mở bảng điều khiển:
 
-1.  **Mở Dashboard**: Nhấn `Ctrl+Shift+Q` hoặc tìm lệnh `Antigravity Cockpit: Open Dashboard`.
-2.  **Làm mới**: Nhấn nút Refresh trên dashboard.
-3.  **Tự động gọi**: Vào tab "Tự động gọi" trong Dashboard để cài đặt lịch chạy (ví dụ chạy lúc 6h sáng để 9h vào làm đã hồi phục quota).
+-   **Định dạng Linh hoạt**: Hiển thị dạng icon, % hoặc tên đầy đủ.
+-   **Truy cập Nhanh**: Nhấn vào góc màn hình để mở Dashboard ngay lập tức.
 
-### Cấu hình chính
+### Phím tắt & Lệnh
 
-Vào **Settings** -> **Antigravity Cockpit**:
-
-| Cấu hình            | Mặc định   | Mô tả                                               |
-| :------------------ | :--------- | :-------------------------------------------------- |
-| `Refresh Interval`  | `120`      | Thời gian tự động làm mới (giây).                   |
-| `Status Bar Format` | `standard` | Kiểu hiển thị thanh trạng thái.                     |
-| `Language`          | `Auto`     | Tự động nhận diện theo ngôn ngữ VS Code (Anh/Việt). |
+| Hành động   | Lệnh                                 | Phím tắt       |
+| :---------- | :----------------------------------- | :------------- |
+| **Mở Nano** | `Antigravity: Open Antigravity Nano` | `Ctrl+Shift+Q` |
 
 ---
 
 ## Support / Hỗ trợ
 
--   ⭐ [GitHub Star](https://github.com/slogvo/antigravity-cockpit-nano)
--   💬 [Report Issue / Báo lỗi](https://github.com/slogvo/antigravity-cockpit-nano/issues)
+-   ⭐ [GitHub Repository](https://github.com/slogvo/antigravity-cockpit-nano)
+-   💬 [Báo lỗi / Feedback](https://github.com/slogvo/antigravity-cockpit-nano/issues)
 
 ## License
 
 [MIT](LICENSE)
 
-**Disclaimer**: This project is for educational purposes only.
-**Miễn trừ trách nhiệm**: Dự án này chỉ phục vụ mục đích học tập và nghiên cứu.
+**Disclaimer**: This project is derived from Antigravity Cockpit. It is designed for lightweight quota monitoring only.
