@@ -3,8 +3,9 @@
     "displayName": "Antigravity Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "publisher": "antigravity-cockpit-nano",
+    "publisherDisplayName": "Antigravity Cockpit Nano",
     "engines": {
         "vscode": "^1.90.0"
     },
