@@ -4,69 +4,31 @@
  */
 
 import * as vscode from 'vscode';
-import { en, zhCN, ja, es, de, fr, ptBR, ru, ko, it, zhTW, tr, pl, cs } from './translations';
+import { en, vi } from './translations';
 
-/** 支持的语言 */
+/** Supported Languages */
 export type SupportedLocale = 
     | 'en' 
-    | 'zh-cn' 
-    | 'ja' 
-    | 'es' 
-    | 'de' 
-    | 'fr' 
-    | 'pt-br' 
-    | 'ru' 
-    | 'ko' 
-    | 'it' 
-    | 'zh-tw' 
-    | 'tr' 
-    | 'pl' 
-    | 'cs';
+    | 'vi';
 
-/** 翻译键值对 */
+/** Translation Map */
 interface TranslationMap {
     [key: string]: string;
 }
 
-/** 翻译资源 */
+/** Translation Resources */
 const translations: Record<SupportedLocale, TranslationMap> = {
     'en': en,
-    'zh-cn': zhCN,
-    'ja': ja,
-    'es': es,
-    'de': de,
-    'fr': fr,
-    'pt-br': ptBR,
-    'ru': ru,
-    'ko': ko,
-    'it': it,
-    'zh-tw': zhTW,
-    'tr': tr,
-    'pl': pl,
-    'cs': cs,
+    'vi': vi,
 };
 
-/** 语言代码映射 - 将 VSCode 语言代码映射到我们支持的语言 */
+/** Locale Mapping */
 const localeMapping: Record<string, SupportedLocale> = {
     'en': 'en',
     'en-us': 'en',
     'en-gb': 'en',
-    'zh-cn': 'zh-cn',
-    'zh-hans': 'zh-cn',
-    'zh-tw': 'zh-tw',
-    'zh-hant': 'zh-tw',
-    'ja': 'ja',
-    'es': 'es',
-    'de': 'de',
-    'fr': 'fr',
-    'pt-br': 'pt-br',
-    'pt': 'pt-br',
-    'ru': 'ru',
-    'ko': 'ko',
-    'it': 'it',
-    'tr': 'tr',
-    'pl': 'pl',
-    'cs': 'cs',
+    'vi': 'vi',
+    'vi-vn': 'vi',
 };
 
 /** i18n 服务类 */
