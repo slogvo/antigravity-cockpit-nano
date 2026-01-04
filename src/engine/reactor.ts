@@ -611,11 +611,7 @@ export class ReactorCore {
                 
                 // If no custom name, use default name
                 if (!groupName) {
-                    if (groupModels.length === 1) {
-                        groupName = groupModels[0].label;
-                    } else {
-                        groupName = `Group ${groupIndex}`;
-                    }
+                    groupName = groupModels[0].label;
                 }
                 
                 const firstModel = groupModels[0];

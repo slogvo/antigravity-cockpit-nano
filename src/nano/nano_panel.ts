@@ -4,7 +4,7 @@ import { logger } from '../shared/log_service';
 
 /**
  * NanoPanel - A lightweight Webview Panel
- * Minimalist design, no dependencies on heavy frameworks.
+ * Focused on Antigravity Cockpit Nano Monitor with local assets.
  */
 export class NanoPanel {
     public static currentPanel: NanoPanel | undefined;
@@ -24,9 +24,6 @@ export class NanoPanel {
         this.panel.onDidDispose(() => this.dispose(), null, this._disposables);
     }
 
-    /**
-     * Create or show the Nano Panel
-     */
     public static createOrShow(extensionUri: vscode.Uri) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -39,25 +36,22 @@ export class NanoPanel {
 
         const panel = vscode.window.createWebviewPanel(
             NanoPanel.viewType,
-            'Nano',
+            'Antigravity Cockpit Nano',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'assets')],
-                retainContextWhenHidden: true, 
-            }
+                retainContextWhenHidden: true,
+            },
         );
 
         NanoPanel.currentPanel = new NanoPanel(panel, extensionUri);
     }
 
-    /**
-     * Send quota data to the view
-     */
     public update(snapshot: QuotaSnapshot) {
         this.panel.webview.postMessage({
             type: 'update',
-            data: snapshot
+            data: snapshot,
         });
     }
 
@@ -75,228 +69,243 @@ export class NanoPanel {
     private getHtmlForWebview(): string {
         const cspNonce = getNonce();
 
+        // Convert local assets to Webview URIs
+        const geminiUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'assets', 'gemini.svg'),
+        );
+        const claudeUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'assets', 'claude.svg'),
+        );
+        const gptUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'assets', 'gpt.svg'),
+        );
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${cspNonce}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this.panel.webview.cspSource} data:; style-src 'unsafe-inline'; script-src 'nonce-${cspNonce}';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano</title>
+    <title>Antigravity Cockpit Nano</title>
     <style>
         :root {
             --accent-green: #4ade80;
             --accent-pink: #f472b6;
             --accent-yellow: #fbbf24;
-            --accent-blue: #60a5fa;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --bg-main: #020617;
+            --border-card: rgba(51, 65, 85, 0.5);
         }
         body {
-            font-family: var(--vscode-font-family), "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #020b14; /* Darker navy theme matching screenshot */
-            color: #e2e8f0;
-            padding: 16px;
+            font-family: var(--vscode-font-family), "Inter", "Segoe UI", sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            padding: 48px;
             margin: 0;
-            font-size: 13px;
-            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
         }
 
-        .header {
+        #app {
+            width: 100%;
+            max-width: 980px;
+        }
+
+        .top-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 32px;
         }
 
-        .header h2 {
+        .title-group h1 {
             margin: 0;
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #94a3b8;
+            letter-spacing: 0px;
+            color: #ffffff;
         }
 
-        .time-display {
-            font-size: 11px;
-            color: #94a3b8;
+        .clock {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
         }
 
-        .user-info {
-            font-size: 11px;
-            color: #64748b;
-            margin-bottom: 20px;
+        .user-section {
+            padding: 0;
+            margin-bottom: 40px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
         }
 
-        #email-display {
-            opacity: 0.8;
+        .user-email {
+            font-size: 16px;
+            font-weight: 400;
+            color: #f8fafc;
+        }
+        .user-email .label {
+            color: var(--text-secondary);
+            margin-right: 8px;
+            font-size: 14px;
         }
 
-        /* Lang Switcher */
-        .lang-switcher {
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+        }
+
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            border: 0.5px solid var(--border-card);
+            padding: 24px;
+            border-radius: 16px;
             display: flex;
+            flex-direction: column;
+            gap: 32px;
+            transition: all 0.2s ease;
+        }
+        .card:hover {
+            border-color: #4755693c;
+            background: rgba(30, 41, 59, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .model-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .m-icon {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .m-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+        .m-title {
+            display: flex;
+            flex-direction: column;
             gap: 4px;
         }
-        .lang-btn {
+        .m-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .badge {
+            font-size: 9px;
+            padding: 4px 8px;
+            margin-top: 4px;
+            border-radius: 20px;
+            font-weight: 500;
+            text-transform: uppercase;
+            width: fit-content;
+            letter-spacing: 0.5px;
+        }
+        .badge-healthy { background: rgba(74, 222, 128, 0.1); color: var(--accent-green); border: 1px solid rgba(74, 222, 128, 0.2); }
+        .badge-warning { background: rgba(251, 191, 36, 0.1); color: var(--accent-yellow); border: 1px solid rgba(251, 191, 36, 0.2); }
+        .badge-danger { background: rgba(244, 114, 182, 0.1); color: var(--accent-pink); border: 1px solid rgba(244, 114, 182, 0.2); }
+
+        .pct {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .p-bg {
+            height: 6px;
             background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #94a3b8;
-            padding: 2px 6px;
-            font-size: 10px;
-            cursor: pointer;
-            border-radius: 3px;
+            border-radius: 4px;
+            overflow: hidden;
         }
-        .lang-btn.active {
-            background: #334155;
-            color: white;
-            border-color: #475569;
+        .p-fill {
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        .p-fill.warning { background: var(--accent-yellow); }
+        .p-fill.danger { background: var(--accent-pink); }
 
-        .model-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .model-item {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .model-row {
+        .reset-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .model-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .model-name {
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .status-badge {
-            font-size: 9px;
-            padding: 1px 5px;
-            border-radius: 10px;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-        .badge-healthy { background: rgba(74, 222, 128, 0.1); color: var(--accent-green); }
-        .badge-warning { background: rgba(251, 191, 36, 0.1); color: var(--accent-yellow); }
-        .badge-danger { background: rgba(244, 114, 182, 0.1); color: var(--accent-pink); }
-
-        .model-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-
-        .model-pct {
-            font-weight: 700;
             font-size: 12px;
+            color: var(--text-secondary);
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.03);
         }
-
-        .model-reset-hint {
-            font-size: 9px;
-            opacity: 0.5;
-            margin-top: 1px;
-        }
-
-        .progress-bar-bg {
-            height: 3px;
-            width: 100%;
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 1px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background-color: var(--accent-green);
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .progress-bar-fill.warning { background-color: var(--accent-yellow); }
-        .progress-bar-fill.danger { background-color: var(--accent-pink); }
+        .r-val { color: #e2e8f0; font-weight: 600; }
 
         .footer {
-            margin-top: 32px;
-            padding-top: 16px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            font-size: 11px;
-            color: #64748b;
+            margin-top: 64px;
             text-align: center;
-        }
-
-        .status-offline {
-            color: #f87171;
-            text-align: center;
-            margin-top: 40px;
-            font-weight: 500;
+            color: #475569;
+            font-size: 12px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <div class="header">
-            <h2 id="title-label">NANO MONITOR</h2>
-            <div class="time-display" id="clock">--:--:--</div>
-        </div>
-
-        <div class="user-info">
-            <div id="email-display">Not logged in</div>
-            <div class="lang-switcher">
-                <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
-                <button class="lang-btn" onclick="setLang('vi')" id="btn-vi">VI</button>
+        <header class="top-header">
+            <div class="title-group">
+                <h1>ANTIGRAVITY COCKPIT NANO MONITOR</h1>
             </div>
-        </div>
+            <div class="clock" id="clock">00:00:00</div>
+        </header>
 
-        <div id="model-container" class="model-list">
-            <div style="text-align: center; opacity: 0.3; padding: 40px;">Initializing systems...</div>
-        </div>
+        <section class="user-section">
+            <div class="user-email">
+                <span class="label">Logged in as:</span>
+                <span id="email-text">Loading user profile...</span>
+            </div>
+        </section>
 
-        <div class="footer" id="footer-text">
-            Next Global Reset: --
-        </div>
+        <main id="model-container" class="grid"></main>
+
+        <footer class="footer">
+            
+        </footer>
     </div>
 
     <script nonce="${cspNonce}">
         const vscode = acquireVsCodeApi();
         let currentSnapshot = null;
-        let currentLang = 'en';
 
-        const i18n = {
-            en: {
-                title: 'NANO MONITOR',
-                healthy: 'Healthy',
-                warning: 'Warning',
-                danger: 'Critical',
-                offline: 'System Offline',
-                resetIn: 'Reset in',
-                nextReset: 'Next Global Reset',
-                loggedAs: 'Logged in as'
-            },
-            vi: {
-                title: 'GIÁM SÁT NANO',
-                healthy: 'Tốt',
-                warning: 'Cảnh báo',
-                danger: 'Nguy kịch',
-                offline: 'Hệ thống ngoại tuyến',
-                resetIn: 'Reset sau',
-                nextReset: 'Lần Reset tới',
-                loggedAs: 'Đăng nhập:'
-            }
+        const ASSETS = {
+            gemini: "${geminiUri}",
+            claude: "${claudeUri}",
+            gpt: "${gptUri}"
         };
 
-        // Clock
+        function getIconSrc(name) {
+            const low = name.toLowerCase();
+            if (low.includes('gemini')) return ASSETS.gemini;
+            if (low.includes('claude')) return ASSETS.claude;
+            if (low.includes('gpt') || low.includes('chatgpt')) return ASSETS.gpt;
+            return null;
+        }
+
         setInterval(() => {
             document.getElementById('clock').textContent = new Date().toLocaleTimeString();
         }, 1000);
@@ -309,93 +318,61 @@ export class NanoPanel {
             }
         });
 
-        function setLang(lang) {
-            currentLang = lang;
-            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-            document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
-            render();
-        }
-
         function render() {
             if (!currentSnapshot) return;
 
-            const t = i18n[currentLang];
-            document.getElementById('title-label').textContent = t.title;
-
-            const emailEl = document.getElementById('email-display');
-            if (currentSnapshot.userInfo && currentSnapshot.userInfo.email) {
-                emailEl.textContent = \`\${t.loggedAs}: \${currentSnapshot.userInfo.email}\`;
-            } else {
-                emailEl.textContent = '';
-            }
+            const emailText = document.getElementById('email-text');
+            emailText.textContent = (currentSnapshot.userInfo && currentSnapshot.userInfo.email) 
+                ? currentSnapshot.userInfo.email 
+                : 'Not Logged In';
 
             const container = document.getElementById('model-container');
-            const footer = document.getElementById('footer-text');
-
-            if (!currentSnapshot.isConnected) {
-                container.innerHTML = \`<div class="status-offline">\${t.offline}</div>\`;
-                return;
-            }
-
             if (currentSnapshot.models && currentSnapshot.models.length > 0) {
                 container.innerHTML = currentSnapshot.models.map(m => {
                     const pct = m.remainingPercentage || 0;
-                    let colorClass = '';
-                    let statusLabel = t.healthy;
-                    let badgeClass = 'badge-healthy';
+                    let color = '';
+                    let status = 'HEALTHY';
+                    let bClass = 'badge-healthy';
 
-                    if (pct < 15) {
-                        colorClass = 'danger';
-                        statusLabel = t.danger;
-                        badgeClass = 'badge-danger';
-                    } else if (pct < 40) {
-                        colorClass = 'warning';
-                        statusLabel = t.warning;
-                        badgeClass = 'badge-warning';
-                    }
+                    if (pct < 15) { color = 'danger'; status = 'CRITICAL'; bClass = 'badge-danger'; }
+                    else if (pct < 40) { color = 'warning'; status = 'WARNING'; bClass = 'badge-warning'; }
 
-                    const resetHint = m.timeUntilResetFormatted ? \`\${t.resetIn} \${m.timeUntilResetFormatted}\` : '';
-                    const resetTime = m.resetTimeDisplay ? \` (\${m.resetTimeDisplay})\` : '';
+                    const resetIn = m.timeUntilResetFormatted || 'N/A';
+                    const resetAt = m.resetTimeDisplay ? \`at \${m.resetTimeDisplay}\` : '';
+                    const src = getIconSrc(m.label);
+                    const iconHtml = src ? \`<img src="\${src}" alt="logo" />\` : '';
 
                     return \`
-                        <div class="model-item">
-                            <div class="model-row">
-                                <div class="model-left">
-                                    <span class="model-name">\${escapeHtml(m.label)}</span>
-                                    <span class="status-badge \${badgeClass}">\${statusLabel}</span>
+                        <div class="card">
+                            <div class="card-top">
+                                <div class="model-meta">
+                                    <div class="m-icon">\${iconHtml}</div>
+                                    <div class="m-title">
+                                        <span class="m-name">\${escapeHtml(m.label)}</span>
+                                        <span class="badge \${bClass}">\${status}</span>
+                                    </div>
                                 </div>
-                                <div class="model-right">
-                                    <span class="model-pct">\${pct.toFixed(2)}%</span>
-                                    <span class="model-reset-hint">\${resetHint}\${resetTime}</span>
-                                </div>
+                                <div class="pct">\${pct.toFixed(2)}%</div>
                             </div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill \${colorClass}" style="width: \${pct}%"></div>
+                            
+                            <div>
+                                <div class="p-bg">
+                                    <div class="p-fill \${color}" style="width: \${pct}%"></div>
+                                </div>
+                                <div class="reset-row">
+                                    <span>Reset in <span class="r-val">\${resetIn}</span></span>
+                                    <span>\${resetAt}</span>
+                                </div>
                             </div>
                         </div>
                     \`;
                 }).join('');
-
-                // Use the first model's reset as global hint for footer if available
-                const globalReset = currentSnapshot.models[0].timeUntilResetFormatted;
-                footer.textContent = \`\${t.nextReset}: \${globalReset || '--'}\`;
-
-            } else {
-                container.innerHTML = '<div style="text-align:center; opacity:0.3; padding: 40px;">No models detected</div>';
             }
         }
 
         function escapeHtml(unsafe) {
-            return unsafe
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
-        
-        // Initial render if data exists
-        if (currentSnapshot) render();
     </script>
 </body>
 </html>`;

@@ -1,10 +1,8 @@
-
 import * as vscode from 'vscode';
 import { CockpitConfig } from '../shared/config_service';
 import { t } from '../shared/i18n';
 import { QuotaSnapshot } from '../shared/types';
 import { STATUS_BAR_FORMAT, QUOTA_THRESHOLDS } from '../shared/constants';
-
 
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
@@ -15,7 +13,7 @@ export class StatusBarController {
             100,
         );
         this.statusBarItem.command = 'antigravity.openNano';
-        this.statusBarItem.text = `$(rocket) ${t('statusBar.init')}`;
+        this.statusBarItem.text = t('statusBar.init');
         this.statusBarItem.tooltip = t('statusBar.tooltip');
         this.statusBarItem.show();
 
@@ -35,7 +33,12 @@ export class StatusBarController {
         let minPercentage = 100;
 
         // Check if grouping display is enabled
-        if (config.groupingEnabled && config.groupingShowInStatusBar && snapshot.groups && snapshot.groups.length > 0) {
+        if (
+            config.groupingEnabled &&
+            config.groupingShowInStatusBar &&
+            snapshot.groups &&
+            snapshot.groups.length > 0
+        ) {
             // Get pinned groups
             const monitoredGroups = snapshot.groups.filter(g =>
                 config.pinnedGroups.includes(g.groupId),
@@ -48,10 +51,16 @@ export class StatusBarController {
                         const idxA = config.groupOrder.indexOf(a.groupId);
                         const idxB = config.groupOrder.indexOf(b.groupId);
                         // If both are in sort list, follow list order
-                        if (idxA !== -1 && idxB !== -1) { return idxA - idxB; }
+                        if (idxA !== -1 && idxB !== -1) {
+                            return idxA - idxB;
+                        }
                         // If one is in list and one is not, list one comes first
-                        if (idxA !== -1) { return -1; }
-                        if (idxB !== -1) { return 1; }
+                        if (idxA !== -1) {
+                            return -1;
+                        }
+                        if (idxB !== -1) {
+                            return 1;
+                        }
                         // Neither in list, keep original order
                         return 0;
                     });
@@ -60,8 +69,15 @@ export class StatusBarController {
                 // Show pinned groups
                 monitoredGroups.forEach(g => {
                     const pct = g.remainingPercentage;
-                    const text = this.formatStatusBarText(g.groupName, pct, config.statusBarFormat, config);
-                    if (text) { statusTextParts.push(text); }
+                    const text = this.formatStatusBarText(
+                        g.groupName,
+                        pct,
+                        config.statusBarFormat,
+                        config,
+                    );
+                    if (text) {
+                        statusTextParts.push(text);
+                    }
                     if (pct < minPercentage) {
                         minPercentage = pct;
                     }
@@ -80,13 +96,22 @@ export class StatusBarController {
                 });
 
                 if (lowestGroup) {
-                    const text = this.formatStatusBarText(lowestGroup.groupName, lowestPct, config.statusBarFormat, config);
+                    const text = this.formatStatusBarText(
+                        lowestGroup.groupName,
+                        lowestPct,
+                        config.statusBarFormat,
+                        config,
+                    );
                     if (text) {
                         statusTextParts.push(text);
                     } else {
                         // For dot-only or percent-only mode, show the lowest
-                        const dot = this.getStatusIcon(lowestPct, config);
-                        statusTextParts.push(config.statusBarFormat === STATUS_BAR_FORMAT.DOT ? dot : `${Math.floor(lowestPct)}%`);
+                        const icon = this.getStatusIcon(lowestPct, lowestGroup.groupName);
+                        statusTextParts.push(
+                            config.statusBarFormat === STATUS_BAR_FORMAT.DOT
+                                ? icon
+                                : `${Math.floor(lowestPct)}%`,
+                        );
                     }
                     minPercentage = lowestPct;
                 }
@@ -95,9 +120,10 @@ export class StatusBarController {
             // Original logic: show models
             // Get pinned models
             const monitoredModels = snapshot.models.filter(m =>
-                config.pinnedModels.some(p =>
-                    p.toLowerCase() === m.modelId.toLowerCase() ||
-                    p.toLowerCase() === m.label.toLowerCase(),
+                config.pinnedModels.some(
+                    p =>
+                        p.toLowerCase() === m.modelId.toLowerCase() ||
+                        p.toLowerCase() === m.label.toLowerCase(),
                 ),
             );
 
@@ -107,9 +133,15 @@ export class StatusBarController {
                     monitoredModels.sort((a, b) => {
                         const idxA = config.modelOrder.indexOf(a.modelId);
                         const idxB = config.modelOrder.indexOf(b.modelId);
-                        if (idxA !== -1 && idxB !== -1) { return idxA - idxB; }
-                        if (idxA !== -1) { return -1; }
-                        if (idxB !== -1) { return 1; }
+                        if (idxA !== -1 && idxB !== -1) {
+                            return idxA - idxB;
+                        }
+                        if (idxA !== -1) {
+                            return -1;
+                        }
+                        if (idxB !== -1) {
+                            return 1;
+                        }
                         return 0;
                     });
                 }
@@ -119,8 +151,15 @@ export class StatusBarController {
                     const pct = m.remainingPercentage ?? 0;
                     // Use custom name (if exists)
                     const displayName = config.modelCustomNames?.[m.modelId] || m.label;
-                    const text = this.formatStatusBarText(displayName, pct, config.statusBarFormat, config);
-                    if (text) { statusTextParts.push(text); }
+                    const text = this.formatStatusBarText(
+                        displayName,
+                        pct,
+                        config.statusBarFormat,
+                        config,
+                    );
+                    if (text) {
+                        statusTextParts.push(text);
+                    }
                     if (pct < minPercentage) {
                         minPercentage = pct;
                     }
@@ -140,14 +179,24 @@ export class StatusBarController {
 
                 if (lowestModel) {
                     // Use custom name (if exists)
-                    const displayName = config.modelCustomNames?.[lowestModel.modelId] || lowestModel.label;
-                    const text = this.formatStatusBarText(displayName, lowestPct, config.statusBarFormat, config);
+                    const displayName =
+                        config.modelCustomNames?.[lowestModel.modelId] || lowestModel.label;
+                    const text = this.formatStatusBarText(
+                        displayName,
+                        lowestPct,
+                        config.statusBarFormat,
+                        config,
+                    );
                     if (text) {
                         statusTextParts.push(text);
                     } else {
                         // For dot-only or percent-only mode, show the lowest
-                        const dot = this.getStatusIcon(lowestPct, config);
-                        statusTextParts.push(config.statusBarFormat === STATUS_BAR_FORMAT.DOT ? dot : `${Math.floor(lowestPct)}%`);
+                        const icon = this.getStatusIcon(lowestPct, lowestModel.label);
+                        statusTextParts.push(
+                            config.statusBarFormat === STATUS_BAR_FORMAT.DOT
+                                ? icon
+                                : `${Math.floor(lowestPct)}%`,
+                        );
                     }
                     minPercentage = lowestPct;
                 }
@@ -158,7 +207,7 @@ export class StatusBarController {
         if (statusTextParts.length > 0) {
             this.statusBarItem.text = statusTextParts.join(' | ');
         } else {
-            this.statusBarItem.text = '🟢';
+            this.statusBarItem.text = 'Nano';
         }
 
         // Remove background color, use color dots before each item to distinguish
@@ -175,7 +224,9 @@ export class StatusBarController {
 
     public setOffline(): void {
         this.statusBarItem.text = `$(error) ${t('statusBar.offline')}`;
-        this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+        this.statusBarItem.backgroundColor = new vscode.ThemeColor(
+            'statusBarItem.warningBackground',
+        );
     }
 
     public setError(message: string): void {
@@ -185,7 +236,7 @@ export class StatusBarController {
     }
 
     public setReady(): void {
-        this.statusBarItem.text = `$(rocket) ${t('statusBar.ready')}`;
+        this.statusBarItem.text = t('statusBar.ready');
         this.statusBarItem.backgroundColor = undefined;
     }
 
@@ -194,7 +245,10 @@ export class StatusBarController {
         this.statusBarItem.tooltip = t('statusBar.tooltip');
     }
 
-    private generateQuotaTooltip(snapshot: QuotaSnapshot, config: CockpitConfig): vscode.MarkdownString {
+    private generateQuotaTooltip(
+        snapshot: QuotaSnapshot,
+        config: CockpitConfig,
+    ): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
         md.supportHtml = true;
@@ -223,16 +277,16 @@ export class StatusBarController {
 
         for (const model of sortedModels) {
             const pct = model.remainingPercentage ?? 0;
-            const icon = this.getStatusIcon(pct, config);
+            const icon = this.getStatusIcon(pct, model.label);
             const bar = this.generateCompactProgressBar(pct);
             const resetTime = model.timeUntilResetFormatted || '-';
 
             // Use full model name
             const pctDisplay = (Math.floor(pct * 100) / 100).toFixed(2);
-            md.appendMarkdown(`| ${icon} **${model.label}** | \`${bar}\` | ${pctDisplay}% → ${resetTime} |\n`);
+            md.appendMarkdown(
+                `| ${icon} **${model.label}** | \`${bar}\` | ${pctDisplay}% → ${resetTime} |\n`,
+            );
         }
-
-
 
         // Footer hint
         md.appendMarkdown(`\n---\n*${t('statusBar.tooltip')}*`);
@@ -249,39 +303,38 @@ export class StatusBarController {
         return '■'.repeat(filled) + '□'.repeat(empty);
     }
 
-    private getStatusIcon(percentage: number, config?: CockpitConfig): string {
-        const warningThreshold = config?.warningThreshold ?? QUOTA_THRESHOLDS.WARNING_DEFAULT;
-        const criticalThreshold = config?.criticalThreshold ?? QUOTA_THRESHOLDS.CRITICAL_DEFAULT;
+    private getStatusIcon(percentage: number, label: string): string {
+        const low = label.toLowerCase();
+        let icon = '✦︎'; // Gemini default
+        if (low.includes('claude')) icon = '✴️';
+        if (low.includes('gpt') || low.includes('chatgpt')) icon = '֎';
 
-        if (percentage <= criticalThreshold) { return '🔴'; }  // Critical
-        if (percentage <= warningThreshold) { return '🟡'; }    // Warning
-        return '🟢'; // Healthy
+        return icon;
     }
 
-    private formatStatusBarText(label: string, percentage: number, format: string, config?: CockpitConfig): string {
-        const dot = this.getStatusIcon(percentage, config);
+    private formatStatusBarText(
+        label: string,
+        percentage: number,
+        format: string,
+        config?: CockpitConfig,
+    ): string {
+        const icon = this.getStatusIcon(percentage, label);
         const pct = `${Math.floor(percentage)}%`;
 
         switch (format) {
             case STATUS_BAR_FORMAT.ICON:
-                // Icon only mode: return empty string, update handles displaying 🚀 uniformly
-                return '';
+                return icon;
             case STATUS_BAR_FORMAT.DOT:
-                // Dot only mode
-                return dot;
+                return icon;
             case STATUS_BAR_FORMAT.PERCENT:
-                // Percent only mode
                 return pct;
             case STATUS_BAR_FORMAT.COMPACT:
-                // Dot + Percent
-                return `${dot} ${pct}`;
+                return `${icon} ${pct}`;
             case STATUS_BAR_FORMAT.NAME_PERCENT:
-                // Name + Percent (No dot)
                 return `${label}: ${pct}`;
             case STATUS_BAR_FORMAT.STANDARD:
             default:
-                // Dot + Name + Percent (Default)
-                return `${dot} ${label}: ${pct}`;
+                return `${icon} ${label}: ${pct}`;
         }
     }
 }

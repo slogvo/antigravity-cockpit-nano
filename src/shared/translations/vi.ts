@@ -3,18 +3,18 @@
  */
 export const vi = {
     // Thanh trạng thái
-    'statusBar.init': 'Quota Monitor: Đang khởi tạo...',
-    'statusBar.connecting': 'Quota Monitor: Đang kết nối...',
-    'statusBar.ready': 'Quota Monitor: Sẵn sàng',
-    'statusBar.offline': 'Quota Monitor: Ngoại tuyến',
-    'statusBar.error': 'Quota Monitor: Lỗi',
+    'statusBar.init': 'Nano: Khởi tạo...',
+    'statusBar.connecting': 'Nano: Kết nối...',
+    'statusBar.ready': 'Nano: Sẵn sàng',
+    'statusBar.offline': 'Nano: Ngoại tuyến',
+    'statusBar.error': 'Nano: Lỗi',
     'statusBar.failure': 'Quota Monitor thất bại',
     'statusBar.lowest': 'Thấp nhất',
     'statusBar.credits': 'Credits',
     'statusBar.tooltip': 'Nhấn để mở Quota Monitor',
 
     // Dashboard
-    'dashboard.title': 'Nano Quota Monitor',
+    'dashboard.title': 'ANTIGRAVITY COCKPIT NANO MONITOR',
     'dashboard.connecting': 'Đang kết nối...',
     'dashboard.offline': 'Hệ thống ngoại tuyến',
     'dashboard.offlineDesc': 'Không tìm thấy tiến trình Antigravity. Vui lòng đảm bảo Antigravity đang chạy.',

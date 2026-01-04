@@ -25,9 +25,10 @@ jest.config.js
 docs/**
 announcements_full.json
 
-# Exclude specific assets (KEEP icon.png)
+# Exclude specific assets (KEEP important ones)
 assets/*
 !assets/icon.png
+!assets/*.svg
 
 # Exclude OS-specific files
 .DS_Store

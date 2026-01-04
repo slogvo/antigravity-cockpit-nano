@@ -3,18 +3,18 @@
  */
 export const en = {
     // 状态栏
-    'statusBar.init': 'Quota Monitor: Init...',
-    'statusBar.connecting': 'Quota Monitor: Connecting...',
-    'statusBar.ready': 'Quota Monitor: Ready',
-    'statusBar.offline': 'Quota Monitor: Offline',
-    'statusBar.error': 'Quota Monitor: Error',
+    'statusBar.init': 'Nano: Init...',
+    'statusBar.connecting': 'Nano: Connecting...',
+    'statusBar.ready': 'Nano: Ready',
+    'statusBar.offline': 'Nano: Offline',
+    'statusBar.error': 'Nano: Error',
     'statusBar.failure': 'Quota Monitor Failure',
     'statusBar.lowest': 'Lowest',
     'statusBar.credits': 'Credits',
     'statusBar.tooltip': 'Click to open Quota Monitor',
 
     // Dashboard
-    'dashboard.title': 'Nano Quota Monitor',
+    'dashboard.title': 'ANTIGRAVITY COCKPIT NANO MONITOR',
     'dashboard.connecting': 'Connecting...',
     'dashboard.offline': 'Systems Offline',
     'dashboard.offlineDesc': 'Could not detect Antigravity process. Please ensure Antigravity is running.',
