@@ -19,7 +19,7 @@ import { t } from '../shared/i18n';
 import { TIMING, API_ENDPOINTS } from '../shared/constants';
 import { captureError } from '../shared/error_reporter';
 import { AntigravityError, isServerError } from '../shared/errors';
-import { autoTriggerController } from '../auto_trigger/controller';
+
 
 
 
@@ -38,7 +38,7 @@ export class ReactorCore {
     private lastScanDiagnostics?: ScanDiagnostics;
     
     /** Cached last quota snapshot */
-    private lastSnapshot?: QuotaSnapshot;
+    public lastSnapshot?: QuotaSnapshot;
     /** Cached last raw API response (used for regenerating groups during reprocess) */
     private lastRawResponse?: ServerUserStatusResponse;
     /** Whether quota data has been successfully fetched (used to decide whether to report subsequent errors) */
@@ -651,9 +651,7 @@ export class ReactorCore {
             logger.debug(`Grouping enabled: ${groups.length} groups created (saved mappings: ${hasSavedMappings})`);
         }
 
-        // Pass model constants in quota to AutoTriggerController for filtering triggerable models
-        const quotaModelConstants = models.map(m => m.modelId);
-        autoTriggerController.setQuotaModels(quotaModelConstants);
+
 
         return {
             timestamp: new Date(),

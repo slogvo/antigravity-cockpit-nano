@@ -4,7 +4,7 @@ import { CockpitConfig } from '../shared/config_service';
 import { t } from '../shared/i18n';
 import { QuotaSnapshot } from '../shared/types';
 import { STATUS_BAR_FORMAT, QUOTA_THRESHOLDS } from '../shared/constants';
-import { autoTriggerController } from '../auto_trigger/controller';
+
 
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
@@ -14,7 +14,7 @@ export class StatusBarController {
             vscode.StatusBarAlignment.Right,
             100,
         );
-        this.statusBarItem.command = 'agCockpit.open';
+        this.statusBarItem.command = 'antigravity.openNano';
         this.statusBarItem.text = `$(rocket) ${t('statusBar.init')}`;
         this.statusBarItem.tooltip = t('statusBar.tooltip');
         this.statusBarItem.show();
@@ -232,11 +232,7 @@ export class StatusBarController {
             md.appendMarkdown(`| ${icon} **${model.label}** | \`${bar}\` | ${pctDisplay}% → ${resetTime} |\n`);
         }
 
-        // Auto trigger next run time
-        const nextTriggerTime = autoTriggerController.getNextRunTimeFormatted();
-        if (nextTriggerTime) {
-            md.appendMarkdown(`\n---\n⏰ **${t('autoTrigger.nextTrigger')}**: ${nextTriggerTime}\n`);
-        }
+
 
         // Footer hint
         md.appendMarkdown(`\n---\n*${t('statusBar.tooltip')}*`);
