@@ -52,16 +52,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Register Nano Commands
     context.subscriptions.push(
         vscode.commands.registerCommand('antigravity.openNano', () => {
-            NanoPanel.createOrShow(context.extensionUri);
+            const version = context.extension.packageJSON.version || '1.0.0';
+            NanoPanel.createOrShow(context.extensionUri, version);
             
-            // If we have cached data, update immediately
+            // If we have cached data, update immediately for instant display
             if (reactor.lastSnapshot) {
                 NanoPanel.currentPanel?.update(reactor.lastSnapshot);
             }
+            
+            // Force fetch fresh data in background to ensure freshness
+            logger.info('Panel opened - triggering background refresh');
+            reactor.syncTelemetry();
         }),
         vscode.commands.registerCommand('antigravity.refreshNano', () => {
             logger.info('User triggered manual refresh from Nano');
             reactor.syncTelemetry();
+        }),
+        vscode.commands.registerCommand('antigravity.recordUsage', (modelId: string) => {
+            logger.info(`Recording usage for model: ${modelId}`);
+            reactor.recordModelUsage(modelId);
         })
     );
 

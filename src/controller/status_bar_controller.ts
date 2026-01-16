@@ -5,9 +5,11 @@ import { QuotaSnapshot } from '../shared/types';
 import { STATUS_BAR_FORMAT, QUOTA_THRESHOLDS } from '../shared/constants';
 
 export class StatusBarController {
+    private context: vscode.ExtensionContext;
     private statusBarItem: vscode.StatusBarItem;
 
     constructor(context: vscode.ExtensionContext) {
+        this.context = context;
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Right,
             100,
@@ -288,8 +290,9 @@ export class StatusBarController {
             );
         }
 
-        // Footer hint
-        md.appendMarkdown(`\n---\n*${t('statusBar.tooltip')}*`);
+        // Footer hint with version
+        const version = this.context.extension.packageJSON.version || '1.0.0';
+        md.appendMarkdown(`\n---\n*Antigravity Nano v${version} | ${t('statusBar.tooltip')}*`);
 
         return md;
     }

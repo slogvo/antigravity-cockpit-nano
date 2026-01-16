@@ -25,7 +25,7 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
 /** Logging Service Class */
 class Logger {
     private outputChannel: vscode.OutputChannel | null = null;
-    private logLevel: LogLevel = LogLevel.INFO;
+    private logLevel: LogLevel = LogLevel.DEBUG; // Set to DEBUG for troubleshooting
     private isInitialized = false;
     private configDisposable?: vscode.Disposable;
 

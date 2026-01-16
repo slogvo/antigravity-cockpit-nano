@@ -19,6 +19,7 @@ import { t } from '../shared/i18n';
 import { TIMING, API_ENDPOINTS } from '../shared/constants';
 import { captureError } from '../shared/error_reporter';
 import { AntigravityError, isServerError } from '../shared/errors';
+import { usageEstimator } from '../shared/usage_estimator';
 
 
 
@@ -66,6 +67,21 @@ export class ReactorCore {
     }
 
     /**
+     * Record estimated model usage (optimistic update)
+     * Call this when you detect user sent a message with a specific model
+     */
+    recordModelUsage(modelId: string): void {
+        logger.debug(`📝 Recording usage for model: ${modelId}`);
+        usageEstimator.recordMessageSent(modelId);
+        
+        // Immediately re-emit snapshot with new estimates
+        if (this.lastSnapshot && this.updateHandler) {
+            const optimisticSnapshot = usageEstimator.applyEstimates(this.lastSnapshot);
+            this.updateHandler(optimisticSnapshot);
+        }
+    }
+
+    /**
      * Transmit HTTP Info
      */
     private async transmit<T>(endpoint: string, payload: object): Promise<T> {
@@ -103,7 +119,7 @@ export class ReactorCore {
                         statusCode: res.statusCode,
                         bodyLength: body.length,
                     });
-                    // logger.debug('Signal Body:', body); // Uncomment to view full response
+                    logger.debug('Signal Body:', body); // Debug: view full API response
 
                     // Check for empty body (often happens during process startup)
                     if (!body || body.trim().length === 0) {
@@ -281,6 +297,9 @@ export class ReactorCore {
         this.lastRawResponse = raw; // Cache raw response
         const telemetry = this.decodeSignal(raw);
         this.lastSnapshot = telemetry; // Cache the latest snapshot
+        
+        // Sync estimates with API data
+        usageEstimator.syncWithApi(telemetry);
 
         // Print key quota info
         const maxLabelLen = Math.max(...telemetry.models.map(m => m.label.length));
@@ -294,8 +313,15 @@ export class ReactorCore {
         // Mark quota data as successfully fetched, subsequent periodic sync failures will not be reported
         this.hasSuccessfulSync = true;
 
+        // Apply usage estimates for optimistic UI
+        const optimisticSnapshot = usageEstimator.applyEstimates(telemetry);
+        
+        if (usageEstimator.hasEstimates()) {
+            logger.debug('📊 Applied usage estimates to quota snapshot');
+        }
+
         if (this.updateHandler) {
-            this.updateHandler(telemetry);
+            this.updateHandler(optimisticSnapshot); // Send optimistic data to UI
         }
     }
 

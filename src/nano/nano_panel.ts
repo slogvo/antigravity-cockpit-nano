@@ -11,11 +11,13 @@ export class NanoPanel {
     private static readonly viewType = 'antigravity.nano';
     private readonly panel: vscode.WebviewPanel;
     private readonly extensionUri: vscode.Uri;
+    private readonly version: string;
     private _disposables: vscode.Disposable[] = [];
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, version: string) {
         this.panel = panel;
         this.extensionUri = extensionUri;
+        this.version = version;
 
         // Set initial HTML
         this.panel.webview.html = this.getHtmlForWebview();
@@ -30,6 +32,9 @@ export class NanoPanel {
                     case 'refresh':
                         vscode.commands.executeCommand('antigravity.refreshNano');
                         return;
+                    case 'recordUsage':
+                        vscode.commands.executeCommand('antigravity.recordUsage', message.modelId);
+                        return;
                 }
             },
             null,
@@ -37,7 +42,7 @@ export class NanoPanel {
         );
     }
 
-    public static createOrShow(extensionUri: vscode.Uri) {
+    public static createOrShow(extensionUri: vscode.Uri, version: string = '1.0.0') {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -58,7 +63,7 @@ export class NanoPanel {
             },
         );
 
-        NanoPanel.currentPanel = new NanoPanel(panel, extensionUri);
+        NanoPanel.currentPanel = new NanoPanel(panel, extensionUri, version);
     }
 
     public update(snapshot: QuotaSnapshot) {

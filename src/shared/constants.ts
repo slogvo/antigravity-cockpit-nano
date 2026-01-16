@@ -18,16 +18,16 @@ export const FEEDBACK_URL = 'https://github.com/jlcodes99/vscode-antigravity-coc
 
 /** Time Related Constants (ms) */
 export const TIMING = {
-    /** Default Refresh Interval */
-    DEFAULT_REFRESH_INTERVAL_MS: 120000,
+    /** Default Refresh Interval (30s for better quota freshness) */
+    DEFAULT_REFRESH_INTERVAL_MS: 30000,
     /** Process Scan Retry Interval */
     PROCESS_SCAN_RETRY_MS: 100,
     /** HTTP Request Timeout (10s, compatible with WSL2 and other slow environments) */
     HTTP_TIMEOUT_MS: 10000,
     /** Process Command Execution Timeout (Increased to 15000ms to accommodate PowerShell cold start on some Windows environments) */
     PROCESS_CMD_TIMEOUT_MS: 15000,
-    /** Refresh Cooldown (Seconds) */
-    REFRESH_COOLDOWN_SECONDS: 60,
+    /** Refresh Cooldown (Seconds) - Reduced for faster manual refresh */
+    REFRESH_COOLDOWN_SECONDS: 15,
     /** Max Consecutive Retries for Runtime Sync Failures */
     MAX_CONSECUTIVE_RETRY: 5,
 } as const;
