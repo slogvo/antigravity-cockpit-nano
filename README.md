@@ -69,8 +69,28 @@ Theo dõi trạng thái nhanh mà không cần mở bảng điều khiển:
 -   ⭐ [GitHub Repository](https://github.com/slogvo/antigravity-cockpit-nano)
 -   💬 [Báo lỗi / Feedback](https://github.com/slogvo/antigravity-cockpit-nano/issues)
 
+## Acknowledgments
+
+This project is inspired by and learned from [**Antigravity Cockpit**](https://github.com/jlcodes99/vscode-antigravity-cockpit) by [@jlcodes99](https://github.com/jlcodes99).
+
+**Antigravity Cockpit Nano** is a lightweight, focused version that:
+
+-   Strips down to core quota monitoring features only
+-   Optimizes for speed (4x faster polling than original)
+-   Reduces package size (48KB vs ~500KB)
+-   Maintains the same reliable API integration
+
+**Credits:**
+
+-   Original concept & architecture: [vscode-antigravity-cockpit](https://github.com/jlcodes99/vscode-antigravity-cockpit)
+-   Nano version development: [@slogvo](https://github.com/slogvo)
+
+We're grateful for the original project's foundation and have built upon it to create a faster, more minimalist alternative for users who prefer simplicity.
+
+---
+
 ## License
 
 [MIT](LICENSE)
 
-**Disclaimer**: This project is derived from Antigravity Cockpit. It is designed for lightweight quota monitoring only.
+**Note**: This is an educational project. Quota monitoring accuracy depends on Antigravity API backend.
