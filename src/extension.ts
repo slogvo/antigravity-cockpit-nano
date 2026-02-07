@@ -11,6 +11,7 @@ import { StatusBarController } from './controller/status_bar_controller';
 import { configService } from './shared/config_service';
 import { NanoPanel } from './nano/nano_panel';
 import { QuotaSnapshot } from './shared/types';
+import { credentialStorage } from './auth/credential_storage';
 
 // Global Instances
 let hunter: ProcessHunter;
@@ -43,6 +44,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Initialize Logger
     logger.init();
     logger.info('Antigravity Nano: Systems Online');
+
+    // Initialize Credential Storage (for authorized mode)
+    credentialStorage.initialize(context);
 
     // Initialize Core Modules
     hunter = new ProcessHunter();

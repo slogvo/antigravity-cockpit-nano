@@ -76,6 +76,7 @@ export const CONFIG_KEYS = {
     PROFILE_HIDDEN: 'profileHidden',
     VIEW_MODE: 'viewMode',
     DATA_MASKED: 'dataMasked',
+    QUOTA_SOURCE: 'quotaSource',
 } as const;
 
 /** Status Bar Display Format */
@@ -108,4 +109,12 @@ export const DISPLAY_MODE = {
     WEBVIEW: 'webview',
     /** QuickPick Menu (Compatibility Mode) */
     QUICKPICK: 'quickpick',
+} as const;
+
+/** Quota Source */
+export const QUOTA_SOURCE = {
+    /** Local API (from Antigravity process) */
+    LOCAL: 'local',
+    /** Authorized API (from Cloud Code) */
+    AUTHORIZED: 'authorized',
 } as const;

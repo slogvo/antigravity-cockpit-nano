@@ -308,11 +308,12 @@ export class StatusBarController {
 
     private getStatusIcon(percentage: number, label: string): string {
         const low = label.toLowerCase();
-        let icon = '✦︎'; // Gemini default
-        if (low.includes('claude')) icon = '✴️';
-        if (low.includes('gpt') || low.includes('chatgpt')) icon = '֎';
-
-        return icon;
+        // Gemini 3 Pro Image uses banana icon 🍌
+        if (low.includes('gemini') && low.includes('image')) return '🍌';
+        if (low.includes('claude')) return '✴️';
+        if (low.includes('gpt') || low.includes('chatgpt')) return '֎';
+        // Default Gemini icon
+        return '✦︎';
     }
 
     private formatStatusBarText(

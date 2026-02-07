@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS, DISPLAY_MODE } from './constants';
+import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS, DISPLAY_MODE, QUOTA_SOURCE } from './constants';
 import { logger } from './log_service';
 
 /** Configuration Object Interface */
@@ -49,6 +49,8 @@ export interface CockpitConfig {
     viewMode: string;
     /** Mask Sensitive Data */
     dataMasked: boolean;
+    /** Quota Source */
+    quotaSource: 'local' | 'authorized';
 }
 
 /** Configuration Service Class */
@@ -93,6 +95,7 @@ class ConfigService {
             profileHidden: config.get<boolean>(CONFIG_KEYS.PROFILE_HIDDEN, false),
             viewMode: config.get<string>(CONFIG_KEYS.VIEW_MODE, 'card'),
             dataMasked: config.get<boolean>(CONFIG_KEYS.DATA_MASKED, false),
+            quotaSource: config.get<'local' | 'authorized'>(CONFIG_KEYS.QUOTA_SOURCE, QUOTA_SOURCE.LOCAL),
         };
     }
 

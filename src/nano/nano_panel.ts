@@ -97,6 +97,12 @@ export class NanoPanel {
         const gptUri = this.panel.webview.asWebviewUri(
             vscode.Uri.joinPath(this.extensionUri, 'assets', 'gpt.svg'),
         );
+        const nanoBananaUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'assets', 'nano-banana.svg'),
+        );
+        const tabCompletionUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'assets', 'tab_completion.svg'),
+        );
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -371,11 +377,17 @@ export class NanoPanel {
         const ASSETS = {
             gemini: "${geminiUri}",
             claude: "${claudeUri}",
-            gpt: "${gptUri}"
+            gpt: "${gptUri}",
+            nanoBanana: "${nanoBananaUri}",
+            tabCompletion: "${tabCompletionUri}"
         };
 
         function getIconSrc(name) {
             const low = name.toLowerCase();
+            // Tab Completion uses its own icon
+            if (low.includes('tab completion') || low.includes('tab_')) return ASSETS.tabCompletion;
+            // Gemini 3 Pro Image uses nano-banana icon
+            if (low.includes('image') && low.includes('gemini')) return ASSETS.nanoBanana;
             if (low.includes('gemini')) return ASSETS.gemini;
             if (low.includes('claude')) return ASSETS.claude;
             if (low.includes('gpt') || low.includes('chatgpt')) return ASSETS.gpt;

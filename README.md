@@ -8,7 +8,7 @@
 
 ---
 
-![Antigravity Cockpit Nano Preview](https://res.cloudinary.com/dgbocu1qv/image/upload/v1770048340/preview_vw8zoa.png)
+![Antigravity Cockpit Nano Preview](https://res.cloudinary.com/dgbocu1qv/image/upload/v1770365154/Screenshot_2026-02-06_150518_idzldb.png)
 
 ## English
 

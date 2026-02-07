@@ -3,7 +3,7 @@
     "displayName": "Antigravity Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
-    "version": "1.0.32",
+    "version": "1.1.0",
     "publisher": "antigravity-cockpit-nano",
     "publisherDisplayName": "Antigravity Cockpit Nano",
     "engines": {
@@ -51,7 +51,32 @@
                 "key": "ctrl+shift+q",
                 "mac": "cmd+shift+q"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Antigravity Nano",
+            "properties": {
+                "agCockpit.quotaSource": {
+                    "type": "string",
+                    "default": "local",
+                    "enum": [
+                        "local",
+                        "authorized"
+                    ],
+                    "enumDescriptions": [
+                        "Use local Antigravity process API (default)",
+                        "Use Cloud Code API with Google OAuth (requires Antigravity Cockpit credentials)"
+                    ],
+                    "description": "Source of quota data. 'authorized' mode enables access to premium models like Gemini 3 Pro Image."
+                },
+                "agCockpit.refreshInterval": {
+                    "type": "number",
+                    "default": 30,
+                    "minimum": 10,
+                    "maximum": 300,
+                    "description": "Refresh interval in seconds"
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run build:prod",

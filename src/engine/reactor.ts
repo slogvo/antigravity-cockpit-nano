@@ -12,6 +12,7 @@ import {
     ClientModelConfig,
     QuotaGroup,
     ScanDiagnostics,
+    UserInfo,
 } from '../shared/types';
 import { logger } from '../shared/log_service';
 import { configService } from '../shared/config_service';
@@ -20,6 +21,9 @@ import { TIMING, API_ENDPOINTS } from '../shared/constants';
 import { captureError } from '../shared/error_reporter';
 import { AntigravityError, isServerError } from '../shared/errors';
 import { usageEstimator } from '../shared/usage_estimator';
+import { cloudCodeClient, CloudCodeAuthError, CloudCodeRequestError, CloudCodeQuotaResponse } from '../shared/cloudcode_client';
+import { credentialStorage } from '../auth/credential_storage';
+import { oauthService } from '../auth/oauth_service';
 
 
 
@@ -42,6 +46,8 @@ export class ReactorCore {
     public lastSnapshot?: QuotaSnapshot;
     /** Cached last raw API response (used for regenerating groups during reprocess) */
     private lastRawResponse?: ServerUserStatusResponse;
+    /** Cached last authorized models (for authorized mode) */
+    private lastAuthorizedModels?: ModelQuotaInfo[];
     /** Whether quota data has been successfully fetched (used to decide whether to report subsequent errors) */
     private hasSuccessfulSync: boolean = false;
 
@@ -283,6 +289,33 @@ export class ReactorCore {
      * Sync telemetry data core logic (Can throw exception, for retry mechanism)
      */
     private async syncTelemetryCore(): Promise<void> {
+        const config = configService.getConfig();
+        
+        // Determine quota source - auto-detect if credentials are available
+        let useAuthorized = config.quotaSource === 'authorized';
+        
+        // Auto-upgrade to authorized if credentials exist (for better UX)
+        if (!useAuthorized) {
+            const hasCredentials = await credentialStorage.hasValidCredential();
+            if (hasCredentials) {
+                logger.info('[Reactor] Auto-detected credentials, upgrading to authorized mode');
+                useAuthorized = true;
+            }
+        }
+        
+        if (useAuthorized) {
+            // Authorized mode: Use Cloud Code API
+            await this.syncAuthorizedTelemetry();
+        } else {
+            // Local mode: Use local Antigravity process
+            await this.syncLocalTelemetry();
+        }
+    }
+
+    /**
+     * Sync telemetry from local Antigravity process
+     */
+    private async syncLocalTelemetry(): Promise<void> {
         const raw = await this.transmit<ServerUserStatusResponse>(
             API_ENDPOINTS.GET_USER_STATUS,
             {
@@ -296,21 +329,255 @@ export class ReactorCore {
 
         this.lastRawResponse = raw; // Cache raw response
         const telemetry = this.decodeSignal(raw);
-        this.lastSnapshot = telemetry; // Cache the latest snapshot
+        this.publishTelemetry(telemetry, 'local');
+    }
+
+    /**
+     * Sync telemetry from Cloud Code API (authorized mode)
+     */
+    private async syncAuthorizedTelemetry(): Promise<void> {
+        try {
+            const hasAuth = await credentialStorage.hasValidCredential();
+            if (!hasAuth) {
+                logger.warn('[AuthorizedQuota] No valid credential, falling back to local');
+                await this.syncLocalTelemetry();
+                return;
+            }
+
+            const tokenResult = await oauthService.getAccessTokenStatus();
+            if (tokenResult.state !== 'ok' || !tokenResult.token) {
+                logger.warn(`[AuthorizedQuota] Token not available (${tokenResult.state}), falling back to local`);
+                await this.syncLocalTelemetry();
+                return;
+            }
+
+            const accessToken = tokenResult.token;
+            
+            // Get project ID from credential
+            const credential = await credentialStorage.getCredential();
+            let projectId = credential?.projectId;
+            
+            if (!projectId) {
+                try {
+                    const info = await cloudCodeClient.resolveProjectId(accessToken, { logLabel: 'AuthorizedQuota' });
+                    projectId = info.projectId;
+                } catch (error) {
+                    const err = error instanceof Error ? error : new Error(String(error));
+                    logger.warn(`[AuthorizedQuota] Failed to resolve project ID: ${err.message}`);
+                }
+            }
+
+            logger.info('[AuthorizedQuota] Fetching available models from Cloud Code API');
+            const data = await cloudCodeClient.fetchAvailableModels(accessToken, projectId, { logLabel: 'AuthorizedQuota' });
+            
+            const models = this.buildModelsFromAuthorizedResponse(data);
+            this.lastAuthorizedModels = models;
+            
+            // Pass email to buildSnapshot for UI display
+            const email = credential?.email;
+            const telemetry = this.buildSnapshot(models, email);
+            this.publishTelemetry(telemetry, 'authorized');
+
+        } catch (error) {
+            if (error instanceof CloudCodeAuthError) {
+                logger.warn(`[AuthorizedQuota] Auth error: ${error.message}, falling back to local`);
+                await this.syncLocalTelemetry();
+                return;
+            }
+            if (error instanceof CloudCodeRequestError && error.retryable) {
+                if (this.lastAuthorizedModels) {
+                    logger.warn('[AuthorizedQuota] Request failed, using cached models');
+                    const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+                    this.publishTelemetry(telemetry, 'authorized');
+                    return;
+                }
+            }
+            // Fall back to local on any error
+            logger.warn(`[AuthorizedQuota] Error: ${error instanceof Error ? error.message : String(error)}, falling back to local`);
+            await this.syncLocalTelemetry();
+        }
+    }
+
+    /**
+     * Build models array from Cloud Code authorized response
+     */
+    private buildModelsFromAuthorizedResponse(data: CloudCodeQuotaResponse): ModelQuotaInfo[] {
+        const models: ModelQuotaInfo[] = [];
+        const now = Date.now();
+
+        if (!data.models) {
+            return models;
+        }
+
+        for (const [modelKey, info] of Object.entries(data.models)) {
+            const quotaInfo = info.quotaInfo;
+            if (!quotaInfo) {
+                continue;
+            }
+
+            // Filter out internal/debug models
+            const rawLabel = info.displayName || modelKey;
+            if (this.isInternalModel(modelKey, rawLabel)) {
+                logger.debug(`[AuthorizedQuota] Filtering out internal model: ${modelKey}`);
+                continue;
+            }
+            
+            // Prettify model name for display
+            const label = this.prettifyModelName(modelKey, rawLabel);
+
+            const remainingFraction = Math.min(1, Math.max(0, quotaInfo.remainingFraction ?? 0));
+            
+            let resetTime: Date;
+            let resetTimeValid = true;
+            if (quotaInfo.resetTime) {
+                const parsed = new Date(quotaInfo.resetTime);
+                if (!Number.isNaN(parsed.getTime())) {
+                    resetTime = parsed;
+                } else {
+                    resetTime = new Date(now + 24 * 60 * 60 * 1000);
+                    resetTimeValid = false;
+                }
+            } else {
+                resetTime = new Date(now + 24 * 60 * 60 * 1000);
+                resetTimeValid = false;
+            }
+            
+            const timeUntilReset = Math.max(0, resetTime.getTime() - now);
+            const modelId = info.model || modelKey;
+
+            models.push({
+                label,
+                modelId,
+                remainingFraction,
+                remainingPercentage: remainingFraction * 100,
+                isExhausted: remainingFraction <= 0,
+                resetTime,
+                resetTimeDisplay: resetTimeValid ? this.formatIso(resetTime) : (t('common.unknown') || 'Unknown'),
+                timeUntilReset,
+                timeUntilResetFormatted: resetTimeValid ? this.formatDelta(timeUntilReset) : (t('common.unknown') || 'Unknown'),
+            });
+        }
+
+        models.sort((a, b) => a.label.localeCompare(b.label));
+        return models;
+    }
+
+    /**
+     * Build snapshot from models array
+     */
+    private buildSnapshot(models: ModelQuotaInfo[], email?: string): QuotaSnapshot {
+        return {
+            timestamp: new Date(),
+            models,
+            userInfo: email ? { email } as UserInfo : undefined,
+            isConnected: true,
+        };
+    }
+
+    /**
+     * Check if model is internal/debug model that should be filtered out
+     */
+    private isInternalModel(modelKey: string, displayName: string): boolean {
+        // Whitelist: Models to always show
+        const whitelist = [
+            /^tab_/i,                // Tab completion models (important feature)
+        ];
+        
+        for (const pattern of whitelist) {
+            if (pattern.test(modelKey)) {
+                return false; // Keep this model
+            }
+        }
+
+        // Filter patterns for internal models
+        const internalPatterns = [
+            /^chat_\d+$/i,           // chat_20706, chat_23310
+            /^test_/i,               // test models
+            /^debug_/i,              // debug models
+            /^internal_/i,           // internal models
+            /^exp_/i,                // experimental models
+        ];
+
+        // Check model key against patterns
+        for (const pattern of internalPatterns) {
+            if (pattern.test(modelKey)) {
+                return true;
+            }
+        }
+
+        // Filter Gemini 2.5 models (keep only Gemini 3.x)
+        const displayLower = displayName.toLowerCase();
+        if (displayLower.includes('gemini 2.5') || displayLower.includes('gemini 2.0')) {
+            return true; // Hide older Gemini versions
+        }
+
+        // Also filter if display name looks like an ID (no spaces, starts with lowercase)
+        if (displayName === modelKey && /^[a-z0-9_]+$/.test(displayName) && !displayName.includes(' ')) {
+            // Whitelist known models without spaces
+            const whitelistedKeys = [
+                'gemini', 'gpt', 'claude', 'sonnet', 'opus', 'flash', 'pro', 'haiku', 'tab'
+            ];
+            const hasKnownPrefix = whitelistedKeys.some(k => displayName.toLowerCase().includes(k));
+            if (!hasKnownPrefix) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Convert ugly model keys to pretty display names
+     */
+    private prettifyModelName(modelKey: string, displayName: string): string {
+        // Custom name mappings for known models
+        const nameMap: Record<string, string> = {
+            'tab_flash_lite_preview': 'Tab Completion (Flash Lite)',
+            'tab_flash_lite': 'Tab Completion (Flash Lite)',
+            'tab_flash': 'Tab Completion (Flash)',
+            'tab_pro': 'Tab Completion (Pro)',
+        };
+
+        // Check if we have a custom mapping
+        const lowerKey = modelKey.toLowerCase();
+        if (nameMap[lowerKey]) {
+            return nameMap[lowerKey];
+        }
+
+        // If displayName is different from modelKey, use displayName
+        if (displayName !== modelKey) {
+            return displayName;
+        }
+
+        // Auto-prettify: Replace underscores with spaces and capitalize
+        return modelKey
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    /**
+     * Publish telemetry to UI
+     */
+    private publishTelemetry(telemetry: QuotaSnapshot, source: 'local' | 'authorized'): void {
+        this.lastSnapshot = telemetry;
         
         // Sync estimates with API data
         usageEstimator.syncWithApi(telemetry);
 
         // Print key quota info
-        const maxLabelLen = Math.max(...telemetry.models.map(m => m.label.length));
-        const quotaSummary = telemetry.models.map(m => {
-            const pct = m.remainingPercentage !== undefined ? m.remainingPercentage.toFixed(2) + '%' : 'N/A';
-            return `    ${m.label.padEnd(maxLabelLen)} : ${pct}`;
-        }).join('\n');
-        
-        logger.info(`Quota Update:\n${quotaSummary}`);
+        if (telemetry.models.length > 0) {
+            const maxLabelLen = Math.max(...telemetry.models.map(m => m.label.length));
+            const quotaSummary = telemetry.models.map(m => {
+                const pct = m.remainingPercentage !== undefined ? m.remainingPercentage.toFixed(2) + '%' : 'N/A';
+                return `    ${m.label.padEnd(maxLabelLen)} : ${pct}`;
+            }).join('\n');
+            
+            logger.info(`Quota Update (${source}):\n${quotaSummary}`);
+        } else {
+            logger.info(`Quota Update (${source}): No models available`);
+        }
 
-        // Mark quota data as successfully fetched, subsequent periodic sync failures will not be reported
+        // Mark quota data as successfully fetched
         this.hasSuccessfulSync = true;
 
         // Apply usage estimates for optimistic UI
@@ -321,10 +588,9 @@ export class ReactorCore {
         }
 
         if (this.updateHandler) {
-            this.updateHandler(optimisticSnapshot); // Send optimistic data to UI
+            this.updateHandler(optimisticSnapshot);
         }
     }
-
     /**
      * Reprocess the latest telemetry data
      * Used to update UI when configuration changes without re-requesting API
@@ -430,6 +696,14 @@ export class ReactorCore {
 
         const configs: ClientModelConfig[] = status.cascadeModelConfigData?.clientModelConfigs || [];
         const modelSorts = status.cascadeModelConfigData?.clientModelSorts || [];
+
+        // DEBUG: Log all raw model configs from API
+        logger.info(`[DEBUG] Raw model configs from API (${configs.length} total):`);
+        for (const cfg of configs) {
+            const hasQuota = !!cfg.quotaInfo;
+            const modelId = cfg.modelOrAlias?.model || 'unknown';
+            logger.info(`  - ${cfg.label} (${modelId}) | hasQuota=${hasQuota} | isRecommended=${cfg.isRecommended}`);
+        }
 
         // Build sort order map (from clientModelSorts)
         const sortOrderMap = new Map<string, number>();
@@ -789,6 +1063,7 @@ export class ReactorCore {
         const GROUPS = {
             GEMINI: ['MODEL_PLACEHOLDER_M8', 'MODEL_PLACEHOLDER_M7'],
             GEMINI_FLASH: ['MODEL_PLACEHOLDER_M18'],
+            GEMINI_IMAGE: ['MODEL_PLACEHOLDER_M9'], // Gemini 3 Pro Image
             CLAUDE_GPT: [
                 'MODEL_CLAUDE_4_5_SONNET',
                 'MODEL_CLAUDE_4_5_SONNET_THINKING',
@@ -805,6 +1080,8 @@ export class ReactorCore {
                 groupName = 'Gemini';
             } else if (GROUPS.GEMINI_FLASH.includes(id)) {
                 groupName = 'Gemini Flash';
+            } else if (GROUPS.GEMINI_IMAGE.includes(id)) {
+                groupName = 'Gemini Image';
             } else if (GROUPS.CLAUDE_GPT.includes(id)) {
                 groupName = 'Claude';
             }
@@ -826,6 +1103,5 @@ export class ReactorCore {
     }
 }
 
-// 保持向后兼容
 export type quota_snapshot = QuotaSnapshot;
 export type model_quota_info = ModelQuotaInfo;
