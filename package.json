@@ -3,7 +3,7 @@
     "displayName": "Antigravity Nano",
     "icon": "assets/icon.png",
     "description": "A lightweight, dashboard-style quota monitor for Antigravity AI.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "publisher": "antigravity-cockpit-nano",
     "publisherDisplayName": "Antigravity Cockpit Nano",
     "engines": {
@@ -43,6 +43,31 @@
                 "command": "antigravity.refreshNano",
                 "title": "Refresh Quota Data",
                 "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.login",
+                "title": "Login with Google",
+                "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.logout",
+                "title": "Logout from Active Account",
+                "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.switchAccount",
+                "title": "Switch Active Account",
+                "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.syncAccounts",
+                "title": "Sync Accounts from Cockpit",
+                "category": "Antigravity"
+            },
+            {
+                "command": "antigravity.debugAccount",
+                "title": "Debug Account Status",
+                "category": "Antigravity"
             }
         ],
         "keybindings": [
@@ -74,6 +99,23 @@
                     "minimum": 10,
                     "maximum": 300,
                     "description": "Refresh interval in seconds"
+                },
+                "agCockpit.logLevel": {
+                    "type": "string",
+                    "default": "debug",
+                    "enum": [
+                        "debug",
+                        "info",
+                        "warn",
+                        "error"
+                    ],
+                    "enumDescriptions": [
+                        "Show all logs including debug messages",
+                        "Show info, warnings and errors",
+                        "Show warnings and errors only",
+                        "Show errors only"
+                    ],
+                    "description": "Log level for Antigravity Nano output channel"
                 }
             }
         }

@@ -329,6 +329,13 @@ export class ReactorCore {
 
         this.lastRawResponse = raw; // Cache raw response
         const telemetry = this.decodeSignal(raw);
+        
+        // Try to enrich with email if we have it
+        const credential = await credentialStorage.getCredential();
+        if (credential?.email) {
+            telemetry.userInfo = { email: credential.email } as UserInfo;
+        }
+        
         this.publishTelemetry(telemetry, 'local');
     }
 
@@ -369,12 +376,15 @@ export class ReactorCore {
 
             logger.info('[AuthorizedQuota] Fetching available models from Cloud Code API');
             const data = await cloudCodeClient.fetchAvailableModels(accessToken, projectId, { logLabel: 'AuthorizedQuota' });
+            logger.debug(`[AuthorizedQuota] Raw API Data: ${JSON.stringify(data)}`);
             
             const models = this.buildModelsFromAuthorizedResponse(data);
             this.lastAuthorizedModels = models;
             
             // Pass email to buildSnapshot for UI display
             const email = credential?.email;
+            logger.info(`[AuthorizedQuota] Syncing for account: ${email}, found ${models.length} models`);
+            
             const telemetry = this.buildSnapshot(models, email);
             this.publishTelemetry(telemetry, 'authorized');
 
@@ -515,7 +525,7 @@ export class ReactorCore {
         if (displayName === modelKey && /^[a-z0-9_]+$/.test(displayName) && !displayName.includes(' ')) {
             // Whitelist known models without spaces
             const whitelistedKeys = [
-                'gemini', 'gpt', 'claude', 'sonnet', 'opus', 'flash', 'pro', 'haiku', 'tab'
+                'gemini', 'gpt', 'claude', 'sonnet', 'opus', 'flash', 'pro', 'haiku', 'tab',
             ];
             const hasKnownPrefix = whitelistedKeys.some(k => displayName.toLowerCase().includes(k));
             if (!hasKnownPrefix) {
@@ -853,7 +863,7 @@ export class ReactorCore {
                     // Remove these models from groupMap and create independent groups for them
                     for (const modelId of modelsToRemove) {
                         // Remove from original group
-                        for (const [gid, gModels] of groupMap) {
+                        for (const [, gModels] of groupMap) {
                             const idx = gModels.findIndex(m => m.modelId === modelId);
                             if (idx !== -1) {
                                 const [removedModel] = gModels.splice(idx, 1);
@@ -882,7 +892,6 @@ export class ReactorCore {
             
             // Convert to QuotaGroup array
             groups = [];
-            let groupIndex = 1;
             
             for (const [groupId, groupModels] of groupMap) {
                 // Anchor Consensus: Find custom names of models in group
@@ -928,8 +937,6 @@ export class ReactorCore {
                     timeUntilResetFormatted: firstModel.timeUntilResetFormatted,
                     isExhausted: groupModels.some(m => m.isExhausted),
                 });
-                
-                groupIndex++;
             }
             
             // Sort by min index of models in original list, maintaining relative order

@@ -29,8 +29,15 @@ export class NanoPanel {
         this.panel.webview.onDidReceiveMessage(
             message => {
                 switch (message.command) {
+                    case 'ready':
+                        logger.info('[NanoPanel] Webview ready, triggering initial refresh');
+                        vscode.commands.executeCommand('antigravity.refreshNano');
+                        return;
                     case 'refresh':
                         vscode.commands.executeCommand('antigravity.refreshNano');
+                        return;
+                    case 'login':
+                        vscode.commands.executeCommand('antigravity.login');
                         return;
                     case 'recordUsage':
                         vscode.commands.executeCommand('antigravity.recordUsage', message.modelId);
@@ -38,7 +45,7 @@ export class NanoPanel {
                 }
             },
             null,
-            this._disposables
+            this._disposables,
         );
     }
 
@@ -344,7 +351,7 @@ export class NanoPanel {
                 <h1>ANTIGRAVITY COCKPIT NANO MONITOR</h1>
             </div>
 
-            <div class="user-info">
+            <div class="user-info" id="user-info-container">
                 <span class="label">Logged in as:</span>
                 <span id="email-text">Loading user profile...</span>
             </div>
@@ -374,6 +381,17 @@ export class NanoPanel {
         const vscode = acquireVsCodeApi();
         let currentSnapshot = null;
 
+        // Signal ready to extension to receive initial data
+        vscode.postMessage({ command: 'ready' });
+
+        // Safety timeout: if no data after 2s, try signaling again
+        setTimeout(() => {
+            if (!currentSnapshot) {
+                console.log('Nano Webview: No data after 2s, retrying ready signal...');
+                vscode.postMessage({ command: 'ready' });
+            }
+        }, 2000);
+
         const ASSETS = {
             gemini: "${geminiUri}",
             claude: "${claudeUri}",
@@ -383,6 +401,7 @@ export class NanoPanel {
         };
 
         function getIconSrc(name) {
+            if (!name) return null;
             const low = name.toLowerCase();
             // Tab Completion uses its own icon
             if (low.includes('tab completion') || low.includes('tab_')) return ASSETS.tabCompletion;
@@ -418,7 +437,7 @@ export class NanoPanel {
             if (refreshCooldown > 0) {
                 refreshBtn.disabled = true;
                 refreshBtn.style.opacity = "0.7";
-                label.textContent = \`(\${refreshCooldown}s)\`;
+                label.textContent = "(" + refreshCooldown + "s)";
                 refreshCooldown--;
                 setTimeout(updateRefreshUI, 1000);
             } else {
@@ -431,6 +450,7 @@ export class NanoPanel {
 
         window.addEventListener('message', event => {
             const message = event.data;
+            console.log('Nano Webview Received Message:', message.type);
             if (message.type === 'update') {
                 currentSnapshot = message.data;
                 render();
@@ -440,12 +460,30 @@ export class NanoPanel {
         });
 
         function render() {
-            if (!currentSnapshot) return;
+            try {
+                _render();
+            } catch (e) {
+                console.error('Nano Webview Render Error:', e);
+                const container = document.getElementById('model-container');
+                if (container) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-pink);">Render Error: ' + e.message + '</div>';
+                }
+            }
+        }
 
-            const emailText = document.getElementById('email-text');
-            emailText.textContent = (currentSnapshot.userInfo && currentSnapshot.userInfo.email) 
-                ? currentSnapshot.userInfo.email 
-                : 'Not Logged In';
+        function _render() {
+            if (!currentSnapshot) {
+                console.log('Nano Webview: No snapshot to render');
+                return;
+            }
+            console.log('Nano Webview Rendering for email:', currentSnapshot.userInfo?.email || 'N/A');
+            
+            const emailContainer = document.getElementById('user-info-container');
+            if (currentSnapshot.userInfo && currentSnapshot.userInfo.email) {
+                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: &quot;login&quot;})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
+            } else {
+                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: &quot;login&quot;})">SIGN IN TO ANTI CLOUD</button>';
+            }
 
             const container = document.getElementById('model-container');
             if (currentSnapshot.models && currentSnapshot.models.length > 0) {
@@ -459,35 +497,34 @@ export class NanoPanel {
                     else if (pct < 40) { color = 'warning'; status = 'WARNING'; bClass = 'badge-warning'; }
 
                     const resetIn = m.timeUntilResetFormatted || 'N/A';
-                    const resetAt = m.resetTimeDisplay ? \`at \${m.resetTimeDisplay}\` : '';
+                    const resetAt = m.resetTimeDisplay ? 'at ' + m.resetTimeDisplay : '';
                     const src = getIconSrc(m.label);
-                    const iconHtml = src ? \`<img src="\${src}" alt="logo" />\` : '';
+                    const iconHtml = src ? '<img src="' + src + '" alt="logo" />' : '';
 
-                    return \`
-                        <div class="card">
-                            <div class="card-top">
-                                <div class="model-meta">
-                                    <div class="m-icon">\${iconHtml}</div>
-                                    <div class="m-title">
-                                        <span class="m-name">\${escapeHtml(m.label)}</span>
-                                        <span class="badge \${bClass}">\${status}</span>
-                                    </div>
-                                </div>
-                                <div class="pct">\${pct.toFixed(2)}%</div>
-                            </div>
-                            
-                            <div>
-                                <div class="p-bg">
-                                    <div class="p-fill \${color}" style="width: \${pct}%"></div>
-                                </div>
-                                <div class="reset-row">
-                                    <span>Reset in <span class="r-val">\${resetIn}</span></span>
-                                    <span>\${resetAt}</span>
-                                </div>
-                            </div>
-                        </div>
-                    \`;
+                    return '<div class="card">' +
+                            '<div class="card-top">' +
+                                '<div class="model-meta">' +
+                                    '<div class="m-icon">' + iconHtml + '</div>' +
+                                    '<div class="m-title">' +
+                                        '<span class="m-name">' + escapeHtml(m.label) + '</span>' +
+                                        '<span class="badge ' + bClass + '">' + status + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="pct">' + pct.toFixed(2) + '%</div>' +
+                            '</div>' +
+                            '<div>' +
+                                '<div class="p-bg">' +
+                                    '<div class="p-fill ' + color + '" style="width: ' + pct + '%"></div>' +
+                                '</div>' +
+                                '<div class="reset-row">' +
+                                    '<span>Reset in <span class="r-val">' + resetIn + '</span></span>' +
+                                    '<span>' + resetAt + '</span>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
                 }).join('');
+            } else {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">No model data available. Please check your connection.</div>';
             }
         }
 

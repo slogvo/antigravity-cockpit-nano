@@ -12,6 +12,7 @@ import { configService } from './shared/config_service';
 import { NanoPanel } from './nano/nano_panel';
 import { QuotaSnapshot } from './shared/types';
 import { credentialStorage } from './auth/credential_storage';
+import { oauthService } from './auth/oauth_service';
 
 // Global Instances
 let hunter: ProcessHunter;
@@ -75,7 +76,167 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand('antigravity.recordUsage', (modelId: string) => {
             logger.info(`Recording usage for model: ${modelId}`);
             reactor.recordModelUsage(modelId);
-        })
+        }),
+        vscode.commands.registerCommand('antigravity.switchAccount', async () => {
+            // Proactively scan logs before showing the menu to catch latest logins
+            await credentialStorage.scanLocalIdeAccounts();
+            
+            const status = await credentialStorage.getAuthorizationStatus();
+            const discovered = await credentialStorage.getDiscoveredEmails();
+            
+            const items: (vscode.QuickPickItem & { account?: { email: string; isActive: boolean; isInvalid?: boolean }; isDiscovered?: boolean })[] = [];
+
+            // 1. Existing authorized accounts
+            if (status.accounts && status.accounts.length > 0) {
+                items.push(...status.accounts.map(acc => ({
+                    label: acc.email,
+                    description: acc.isActive ? '(Active)' : '',
+                    detail: acc.isInvalid ? 'Invalid / Expired' : undefined,
+                    account: acc,
+                })));
+            }
+
+            // 2. Discovered accounts (not yet in Nano)
+            const existingEmails = new Set((status.accounts || []).map(a => a.email));
+            const newDiscovered = discovered.filter(email => !existingEmails.has(email));
+
+            if (newDiscovered.length > 0) {
+                items.push({ label: 'Detected accounts from IDE (Sign in required)', kind: vscode.QuickPickItemKind.Separator });
+                items.push(...newDiscovered.map(email => ({
+                    label: email,
+                    description: '$(mail) Not signed in',
+                    detail: 'Click to sign in with this account',
+                    isDiscovered: true,
+                })));
+            }
+
+            if (items.length === 0) {
+                vscode.window.showWarningMessage('No accounts available. Please login via Google.');
+                return;
+            }
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select active account',
+            });
+
+            if (selected) {
+                if (selected.isDiscovered) {
+                    // Logic for quick login with the discovered email
+                    await vscode.commands.executeCommand('antigravity.login');
+                } else if (selected.account) {
+                    await credentialStorage.setActiveAccount(selected.label, true);
+                    vscode.window.showInformationMessage(`Switched to account: ${selected.label}`);
+                    reactor.syncTelemetry();
+                }
+            }
+        }),
+        vscode.commands.registerCommand('antigravity.syncAccounts', async () => {
+            logger.info('User triggered manual account sync');
+            await credentialStorage.importFromSharedFolder();
+            vscode.window.showInformationMessage('Accounts synced from shared folder.');
+            reactor.syncTelemetry();
+        }),
+        vscode.commands.registerCommand('antigravity.login', async () => {
+            logger.info('User triggered manual login');
+            const success = await oauthService.startAuthorization();
+            if (success) {
+                reactor.syncTelemetry();
+            }
+        }),
+        vscode.commands.registerCommand('antigravity.logout', async () => {
+            const active = await credentialStorage.getActiveAccount();
+            if (!active) {
+                vscode.window.showInformationMessage('No active account to logout.');
+                return;
+            }
+
+            const confirm = await vscode.window.showWarningMessage(
+                `Are you sure you want to logout from ${active}?`,
+                { modal: true },
+                'Logout',
+            );
+
+            if (confirm === 'Logout') {
+                await credentialStorage.removeAccount(active); 
+                vscode.window.showInformationMessage(`Logged out from ${active}.`);
+                reactor.syncTelemetry();
+            }
+        }),
+        vscode.commands.registerCommand('antigravity.debugAccount', async () => {
+            const active = await credentialStorage.getActiveAccount();
+            const isManual = await credentialStorage.isManualAccount();
+            const status = await credentialStorage.getAuthorizationStatus();
+            
+            const info = [
+                `Active Account: ${active || 'None'}`,
+                `Selection Mode: ${isManual ? 'Manual (User selected)' : 'Auto (Synced from Cockpit)'}`,
+                `Is Authorized: ${status.isAuthorized}`,
+                `Total Known Accounts: ${status.accounts?.length || 0}`,
+            ].join('\n');
+
+            vscode.window.showInformationMessage('Antigravity Debug Info', { modal: true, detail: info });
+        }),
+        vscode.commands.registerCommand('antigravity.showStatusBarMenu', async () => {
+            const active = await credentialStorage.getActiveAccount();
+            const status = await credentialStorage.getAuthorizationStatus();
+            const discovered = await credentialStorage.getDiscoveredEmails();
+            
+            const items: (vscode.QuickPickItem & { action?: string, email?: string })[] = [
+                {
+                    label: '$(dashboard) Open Nano Monitor',
+                    description: 'View full quota details',
+                    action: 'open',
+                },
+                { label: '', kind: vscode.QuickPickItemKind.Separator },
+            ];
+
+            if (active) {
+                items.push({
+                    label: `$(account) Active: ${active}`,
+                    description: status.isAuthorized ? '(Authorized)' : '(Offline)',
+                    detail: 'Click to switch or logout',
+                    action: 'switch',
+                });
+            } else {
+                items.push({ 
+                    label: '$(key) Sign In with Google', 
+                    description: 'Enable premium model tracking',
+                    action: 'login',
+                });
+
+                // Add discovered accounts for quick login
+                if (discovered.length > 0) {
+                    items.push({ label: 'Detected accounts from IDE', kind: vscode.QuickPickItemKind.Separator });
+                    for (const email of discovered) {
+                        items.push({
+                            label: `$(mail) Log in as ${email}`,
+                            action: 'login',
+                            email,
+                        });
+                    }
+                }
+            }
+
+            items.push({ label: '', kind: vscode.QuickPickItemKind.Separator });
+            items.push({ label: '$(sync) Refresh Quota', action: 'refresh' });
+            items.push({ label: '$(cloud-download) Sync from Cockpit', action: 'sync' });
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Antigravity Quick Menu',
+            });
+
+            if (!selected) {
+                return;
+            }
+
+            switch (selected.action) {
+                case 'open': vscode.commands.executeCommand('antigravity.openNano'); break;
+                case 'login': vscode.commands.executeCommand('antigravity.login'); break;
+                case 'switch': vscode.commands.executeCommand('antigravity.switchAccount'); break;
+                case 'refresh': vscode.commands.executeCommand('antigravity.refreshNano'); break;
+                case 'sync': vscode.commands.executeCommand('antigravity.syncAccounts'); break;
+            }
+        }),
     );
 
     // Hook up Data Stream
@@ -109,9 +270,8 @@ async function bootSystems(): Promise<void> {
             statusBar.setReady();
             logger.info('System boot successful');
         } else {
-            console.log('Boot failed: No connection info found.');
-             // In Nano, maybe we just show offline status
-             statusBar.setOffline();
+            // In Nano, maybe we just show offline status
+            statusBar.setOffline();
         }
     }
     catch (e) {
@@ -121,6 +281,7 @@ async function bootSystems(): Promise<void> {
 }
 
 export async function deactivate(): Promise<void> {
+    credentialStorage.dispose();
     reactor?.shutdown();
     logger.dispose();
 }

@@ -14,7 +14,7 @@ export class StatusBarController {
             vscode.StatusBarAlignment.Right,
             100,
         );
-        this.statusBarItem.command = 'antigravity.openNano';
+        this.statusBarItem.command = 'antigravity.showStatusBarMenu';
         this.statusBarItem.text = t('statusBar.init');
         this.statusBarItem.tooltip = t('statusBar.tooltip');
         this.statusBarItem.show();
@@ -206,10 +206,11 @@ export class StatusBarController {
         }
 
         // Update status bar
+        const accountLabel = snapshot.userInfo?.email ? ` (${snapshot.userInfo.email.split('@')[0]})` : '';
         if (statusTextParts.length > 0) {
-            this.statusBarItem.text = statusTextParts.join(' | ');
+            this.statusBarItem.text = statusTextParts.join(' | ') + accountLabel;
         } else {
-            this.statusBarItem.text = 'Nano';
+            this.statusBarItem.text = 'Nano' + accountLabel;
         }
 
         // Remove background color, use color dots before each item to distinguish
