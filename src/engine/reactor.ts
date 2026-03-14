@@ -473,7 +473,7 @@ export class ReactorCore {
         const labelMap = new Map<string, typeof models[0]>();
         for (const m of models) {
             const existing = labelMap.get(m.label);
-            if (!existing || m.remainingFraction < existing.remainingFraction) {
+            if (!existing || (m.remainingFraction ?? 0) < (existing.remainingFraction ?? 0)) {
                 labelMap.set(m.label, m);
             }
         }
