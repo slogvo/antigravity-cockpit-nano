@@ -468,7 +468,18 @@ export class ReactorCore {
             });
         }
 
-        models.sort((a, b) => {
+        // Deduplicate models with same label: keep the one with the lowest remainingFraction
+        // (i.e., the most constrained quota slot is the meaningful one)
+        const labelMap = new Map<string, typeof models[0]>();
+        for (const m of models) {
+            const existing = labelMap.get(m.label);
+            if (!existing || m.remainingFraction < existing.remainingFraction) {
+                labelMap.set(m.label, m);
+            }
+        }
+        const deduped = Array.from(labelMap.values());
+
+        deduped.sort((a, b) => {
             const getGroupPriority = (label: string): number => {
                 const lower = label.toLowerCase();
                 if (lower.includes('gemini')) { return 0; }
@@ -485,6 +496,10 @@ export class ReactorCore {
                 return 0;
             };
 
+            // Image/vision models go after regular models of the same version
+            const isImageModel = (label: string): boolean =>
+                /image|vision/i.test(label);
+
             const groupA = getGroupPriority(a.label);
             const groupB = getGroupPriority(b.label);
             if (groupA !== groupB) { return groupA - groupB; }
@@ -494,9 +509,14 @@ export class ReactorCore {
             const verB = extractVersion(b.label);
             if (verA !== verB) { return verB - verA; }
 
+            // Same version: Image models go last
+            const imgA = isImageModel(a.label) ? 1 : 0;
+            const imgB = isImageModel(b.label) ? 1 : 0;
+            if (imgA !== imgB) { return imgA - imgB; }
+
             return a.label.localeCompare(b.label);
         });
-        return models;
+        return deduped;
     }
 
     /**
