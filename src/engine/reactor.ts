@@ -468,7 +468,34 @@ export class ReactorCore {
             });
         }
 
-        models.sort((a, b) => a.label.localeCompare(b.label));
+        models.sort((a, b) => {
+            const getGroupPriority = (label: string): number => {
+                const lower = label.toLowerCase();
+                if (lower.includes('gemini')) { return 0; }
+                if (lower.includes('claude')) { return 1; }
+                return 2;
+            };
+
+            // Extract version number like "3.1", "3.0", "4.6" from label for secondary sort
+            const extractVersion = (label: string): number => {
+                const match = label.match(/(\d+)\.(\d+)/);
+                if (match) { return parseInt(match[1]) * 100 + parseInt(match[2]); }
+                const singleMatch = label.match(/(\d+)/);
+                if (singleMatch) { return parseInt(singleMatch[1]) * 100; }
+                return 0;
+            };
+
+            const groupA = getGroupPriority(a.label);
+            const groupB = getGroupPriority(b.label);
+            if (groupA !== groupB) { return groupA - groupB; }
+
+            // Same group: sort by version descending (higher version first)
+            const verA = extractVersion(a.label);
+            const verB = extractVersion(b.label);
+            if (verA !== verB) { return verB - verA; }
+
+            return a.label.localeCompare(b.label);
+        });
         return models;
     }
 

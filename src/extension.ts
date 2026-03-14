@@ -109,19 +109,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                     isDiscovered: true,
                 })));
             }
-
-            if (items.length === 0) {
-                vscode.window.showWarningMessage('No accounts available. Please login via Google.');
-                return;
+            // 3. Always show "Sign in with new account" at the bottom
+            if (items.length > 0) {
+                items.push({ label: '', kind: vscode.QuickPickItemKind.Separator });
             }
+            items.push({
+                label: '$(add) Sign in with a new account',
+                description: 'Add another Google account',
+            });
 
             const selected = await vscode.window.showQuickPick(items, {
                 placeHolder: 'Select active account',
             });
 
             if (selected) {
-                if (selected.isDiscovered) {
-                    // Logic for quick login with the discovered email
+                if (selected.label.includes('Sign in with a new account') || selected.isDiscovered) {
                     await vscode.commands.executeCommand('antigravity.login');
                 } else if (selected.account) {
                     await credentialStorage.setActiveAccount(selected.label, true);
