@@ -255,6 +255,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         checkLowQuota(snapshot);
     });
 
+    // Cập nhật giao diện ngay lập tức khi thay đổi cấu hình (như Pin model)
+    configService.onConfigChange((config) => {
+        const snapshot = reactor.getLatestSnapshot();
+        if (snapshot) {
+            statusBar.update(snapshot, config);
+            if (NanoPanel.currentPanel) {
+                NanoPanel.currentPanel.update(snapshot);
+            }
+        }
+    });
+
     // Listen to configuration changes and immediately update UI without calling API
     configService.onConfigChange((config) => {
         const snapshot = reactor.getLatestSnapshot();

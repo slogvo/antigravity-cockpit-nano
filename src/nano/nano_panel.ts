@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { QuotaSnapshot } from '../shared/types';
 import { logger } from '../shared/log_service';
+import { configService } from '../shared/config_service';
 
 /**
  * NanoPanel - A lightweight Webview Panel
@@ -42,6 +43,10 @@ export class NanoPanel {
                     case 'recordUsage':
                         vscode.commands.executeCommand('antigravity.recordUsage', message.modelId);
                         return;
+                    case 'pinModel':
+                        // Lưu cấu hình ghim model
+                        configService.togglePinnedModel(message.modelId);
+                        return;
                 }
             },
             null,
@@ -77,6 +82,7 @@ export class NanoPanel {
         this.panel.webview.postMessage({
             type: 'update',
             data: snapshot,
+            pinnedModels: configService.getConfig().pinnedModels
         });
     }
 
@@ -310,6 +316,24 @@ export class NanoPanel {
             font-variant-numeric: tabular-nums;
         }
 
+        /* Pin Button Styles */
+        .pin-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.5;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pin-btn:hover { opacity: 1; color: var(--text-primary); }
+        .pin-btn.active { opacity: 1; color: var(--accent-yellow); }
+        .pin-btn svg { fill: transparent; transition: fill 0.2s; }
+        .pin-btn.active svg { fill: currentColor; }
+
         .p-bg {
             height: 6px;
             background: rgba(255,255,255,0.05);
@@ -450,9 +474,9 @@ export class NanoPanel {
 
         window.addEventListener('message', event => {
             const message = event.data;
-            console.log('Nano Webview Received Message:', message.type);
             if (message.type === 'update') {
                 currentSnapshot = message.data;
+                pinnedModels = message.pinnedModels || [];
                 render();
                 // Stop spinning when we get an update
                 refreshBtn.classList.remove('loading');
@@ -501,6 +525,10 @@ export class NanoPanel {
                     const src = getIconSrc(m.label);
                     const iconHtml = src ? '<img src="' + src + '" alt="logo" />' : '';
 
+                    const isPinned = pinnedModels.includes(m.modelId) || pinnedModels.includes(m.label);
+                    const pinClass = isPinned ? 'pin-btn active' : 'pin-btn';
+                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" pointer-events="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+
                     return '<div class="card">' +
                             '<div class="card-top">' +
                                 '<div class="model-meta">' +
@@ -510,7 +538,10 @@ export class NanoPanel {
                                         '<span class="badge ' + bClass + '">' + status + '</span>' +
                                     '</div>' +
                                 '</div>' +
-                                '<div class="pct">' + pct.toFixed(2) + '%</div>' +
+                                '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
+                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: \'pinModel\', modelId: \'' + escapeHtml(m.modelId) + '\'})">' + starIcon + '</button>' +
+                                    '<div class="pct">' + pct.toFixed(2) + '%</div>' +
+                                '</div>' +
                             '</div>' +
                             '<div>' +
                                 '<div class="p-bg">' +
