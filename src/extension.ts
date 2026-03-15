@@ -266,17 +266,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
     });
 
-    // Listen to configuration changes and immediately update UI without calling API
-    configService.onConfigChange((config) => {
-        const snapshot = reactor.getLatestSnapshot();
-        if (snapshot) {
-            statusBar.update(snapshot, config);
-            if (NanoPanel.currentPanel) {
-                // Update Panel with newest config
-                NanoPanel.currentPanel.update(snapshot);
-            }
-        }
-    });
+
 
     // Boot Systems
     await bootSystems();

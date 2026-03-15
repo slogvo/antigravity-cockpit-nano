@@ -504,9 +504,9 @@ export class NanoPanel {
             
             const emailContainer = document.getElementById('user-info-container');
             if (currentSnapshot.userInfo && currentSnapshot.userInfo.email) {
-                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: &quot;login&quot;})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
+                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: \'login\'})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
             } else {
-                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: &quot;login&quot;})">SIGN IN TO ANTI CLOUD</button>';
+                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: \'login\'})">SIGN IN TO ANTI CLOUD</button>';
             }
 
             const container = document.getElementById('model-container');
