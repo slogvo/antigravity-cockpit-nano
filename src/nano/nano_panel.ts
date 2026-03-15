@@ -14,6 +14,7 @@ export class NanoPanel {
     private readonly extensionUri: vscode.Uri;
     private readonly version: string;
     private _disposables: vscode.Disposable[] = [];
+    private _lastSnapshot: QuotaSnapshot | undefined;
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, version: string) {
         this.panel = panel;
@@ -31,8 +32,10 @@ export class NanoPanel {
             message => {
                 switch (message.command) {
                     case 'ready':
-                        logger.info('[NanoPanel] Webview ready, triggering initial refresh');
-                        vscode.commands.executeCommand('antigravity.refreshNano');
+                        logger.info('[NanoPanel] Webview ready signal received');
+                        if (this._lastSnapshot) {
+                            this.update(this._lastSnapshot);
+                        }
                         return;
                     case 'refresh':
                         vscode.commands.executeCommand('antigravity.refreshNano');
@@ -78,6 +81,7 @@ export class NanoPanel {
     }
 
     public update(snapshot: QuotaSnapshot) {
+        this._lastSnapshot = snapshot;
         this.panel.webview.postMessage({
             type: 'update',
             data: snapshot,
@@ -527,7 +531,7 @@ export class NanoPanel {
 
                     const isPinned = pinnedModels.includes(m.modelId) || pinnedModels.includes(m.label);
                     const pinClass = isPinned ? 'pin-btn active' : 'pin-btn';
-                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" pointer-events="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
 
                     return '<div class="card">' +
                             '<div class="card-top">' +
@@ -539,7 +543,7 @@ export class NanoPanel {
                                     '</div>' +
                                 '</div>' +
                                 '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
-                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: &quot;pinModel&quot;, modelId: &quot;' + escapeHtml(m.modelId) + '&quot;})">' + starIcon + '</button>' +
+                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: \'pinModel\', modelId: \'' + escapeHtml(m.modelId) + '\'})">' + starIcon + '</button>' +
                                     '<div class="pct">' + pct.toFixed(2) + '%</div>' +
                                 '</div>' +
                             '</div>' +
