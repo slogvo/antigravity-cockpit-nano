@@ -331,6 +331,8 @@ export class NanoPanel {
         }
         .pin-btn:hover { opacity: 1; color: var(--text-primary); }
         .pin-btn.active { opacity: 1; color: var(--accent-yellow); }
+        .pin-btn svg { fill: transparent; transition: fill 0.2s; }
+        .pin-btn.active svg { fill: currentColor; }
 
         .p-bg {
             height: 6px;
@@ -527,7 +529,7 @@ export class NanoPanel {
 
                     const isPinned = pinnedModels.includes(m.modelId) || pinnedModels.includes(m.label);
                     const pinClass = isPinned ? 'pin-btn active' : 'pin-btn';
-                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isPinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
 
                     return '<div class="card">' +
                             '<div class="card-top">' +
@@ -539,7 +541,7 @@ export class NanoPanel {
                                     '</div>' +
                                 '</div>' +
                                 '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
-                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="vscode.postMessage({command: &quot;pinModel&quot;, modelId: &quot;' + escapeHtml(m.modelId) + '&quot;})">' + starIcon + '</button>' +
+                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: &quot;pinModel&quot;, modelId: &quot;' + escapeHtml(m.modelId) + '&quot;})">' + starIcon + '</button>' +
                                     '<div class="pct">' + pct.toFixed(2) + '%</div>' +
                                 '</div>' +
                             '</div>' +
