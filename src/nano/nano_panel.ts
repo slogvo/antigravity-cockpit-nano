@@ -44,9 +44,7 @@ export class NanoPanel {
                         vscode.commands.executeCommand('antigravity.recordUsage', message.modelId);
                         return;
                     case 'pinModel':
-                        configService.togglePinnedModel(message.modelId).then(() => {
-                            vscode.commands.executeCommand('antigravity.refreshNano');
-                        });
+                        configService.togglePinnedModel(message.modelId);
                         return;
                 }
             },
