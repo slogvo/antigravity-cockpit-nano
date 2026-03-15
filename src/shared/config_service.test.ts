@@ -4,13 +4,18 @@ import * as vscode from 'vscode';
 describe('ConfigService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // Clear ConfigService private cache for each test
+        (configService as any).cachedConfig = undefined;
     });
 
     it('should retrieve configuration correctly', () => {
-        const mockGet = jest.fn((key, defaultValue) => defaultValue);
+        const mockGet = jest.fn().mockImplementation((key, defaultValue) => {
+            if (key === 'pinnedModels') {return [];}
+            return defaultValue;
+        });
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
             get: mockGet,
-            update: jest.fn()
+            update: jest.fn(),
         });
 
         const config = configService.getConfig();
@@ -22,7 +27,7 @@ describe('ConfigService', () => {
         const pinnedModels = ['model-1'];
         const mockConfig = {
             get: jest.fn().mockReturnValue(pinnedModels),
-            update: jest.fn().mockResolvedValue(true)
+            update: jest.fn().mockResolvedValue(true),
         };
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(mockConfig);
 
@@ -39,7 +44,7 @@ describe('ConfigService', () => {
     it('should check if model is pinned (case insensitive)', () => {
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
             get: jest.fn().mockReturnValue(['Model-X', 'model-y']),
-            update: jest.fn()
+            update: jest.fn(),
         });
 
         expect(configService.isModelPinned('model-x')).toBe(true);
@@ -57,7 +62,7 @@ describe('ConfigService', () => {
         if (calls.length > 0) {
             const onDidChangeConfiguration = calls[0][0];
             const mockEvent = {
-                affectsConfiguration: jest.fn().mockReturnValue(true)
+                affectsConfiguration: jest.fn().mockReturnValue(true),
             };
             onDidChangeConfiguration(mockEvent);
             expect(listener).toHaveBeenCalled();

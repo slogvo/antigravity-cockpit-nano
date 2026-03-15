@@ -1,0 +1,58 @@
+  console.info
+    [2026-03-15 05:45:54] [INFO] Toggling pin state for model: model-1
+
+      at Logger.log (src/shared/log_service.ts:132:25)
+
+  console.info
+    [2026-03-15 05:45:54] [INFO] Model model-1 not found, adding.
+
+      at Logger.log (src/shared/log_service.ts:132:25)
+
+  console.info
+    [2026-03-15 05:45:54] [INFO] New pinned models: ["model-1"]
+
+      at Logger.log (src/shared/log_service.ts:132:25)
+
+  console.info
+    [2026-03-15 05:45:54] [INFO] Updating config 'agCockpit.pinnedModels': ["model-1"]
+
+      at Logger.log (src/shared/log_service.ts:132:25)
+
+FAIL src/shared/config_service.test.ts
+  ConfigService
+    √ should retrieve configuration correctly (9 ms)
+    × should toggle pinned models correctly (65 ms)
+    √ should check if model is pinned (case insensitive) (2 ms)
+    √ should register and notify config change listeners (2 ms)
+
+  ● ConfigService › should toggle pinned models correctly
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "pinnedModels",
+    - Array []
+    + Array [
+    +   "model-1",
+    + ],
+      1,
+
+    Number of calls: 1
+
+    [0m [90m 29 |[39m         [90m// Toggle existing model (should remove it)[39m
+     [90m 30 |[39m         [36mawait[39m configService[33m.[39mtogglePinnedModel([32m'model-1'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 31 |[39m         expect(mockConfig[33m.[39mupdate)[33m.[39mtoHaveBeenCalledWith([32m'pinnedModels'[39m[33m,[39m [][33m,[39m vscode[33m.[39m[33mConfigurationTarget[39m[33m.[39m[33mGlobal[39m)[33m;[39m
+     [90m    |[39m                                   [31m[1m^[22m[39m
+     [90m 32 |[39m
+     [90m 33 |[39m         [90m// Toggle new model (should add it)[39m
+     [90m 34 |[39m         mockConfig[33m.[39m[36mget[39m[33m.[39mmockReturnValue([])[33m;[39m[0m
+
+      at Object.<anonymous> (src/shared/config_service.test.ts:31:35)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        3.367 s, estimated 16 s
+Ran all test suites matching src/shared/config_service.test.ts.

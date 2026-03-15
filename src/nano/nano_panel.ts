@@ -129,6 +129,7 @@ export class NanoPanel {
             --accent-green: #4ade80;
             --accent-pink: #f472b6;
             --accent-yellow: #fbbf24;
+            --accent-blue: #60a5fa;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --bg-main: #020617;
@@ -156,6 +157,9 @@ export class NanoPanel {
             margin-bottom: 32px;
         }
 
+        .title-group {
+            margin-bottom: 8px;
+        }
         .title-group h1 {
             margin: 0;
             font-size: 20px;
@@ -165,8 +169,15 @@ export class NanoPanel {
             color: #ffffff;
         }
 
+        .header-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
         .user-info {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 400;
             color: #f8fafc;
             display: flex;
@@ -175,13 +186,23 @@ export class NanoPanel {
         .user-info .label {
             color: var(--text-secondary);
             margin-right: 8px;
-            font-size: 14px;
+        }
+
+        .version-tag {
+            background: rgba(255,255,255,0.08); 
+            padding: 4px 10px; 
+            border-radius: 8px; 
+            font-size: 11px; 
+            font-weight: 600; 
+            color: var(--text-secondary);
+            border: 1px solid rgba(255,255,255,0.04);
         }
 
         .refresh-row {
             display: flex;
             align-items: center;
             gap: 12px;
+            margin-bottom: 20px;
         }
 
         .refresh-btn {
@@ -318,28 +339,46 @@ export class NanoPanel {
 
         /* Pin Button Styles */
         .pin-btn {
-            background: none;
-            border: none;
+            all: unset;
             color: var(--text-secondary);
             cursor: pointer;
-            padding: 4px;
-            opacity: 0.5;
+            padding: 8px;
+            margin: -4px;
+            opacity: 0.6;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10;
         }
-        .pin-btn:hover { opacity: 1; color: var(--text-primary); }
+        .pin-btn:hover { opacity: 1; color: var(--text-primary); transform: scale(1.1); }
         .pin-btn.active { opacity: 1; color: var(--accent-yellow); }
-        .pin-btn svg { fill: transparent; transition: fill 0.2s; }
+        .pin-btn svg { fill: transparent; transition: fill 0.2s; pointer-events: none; }
         .pin-btn.active svg { fill: currentColor; }
 
         .p-bg {
             height: 6px;
             background: rgba(255,255,255,0.05);
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
+            margin: 16px 0 8px 0;
         }
+
+        /* Info Alert Box */
+        .info-box {
+            background: rgba(96, 165, 250, 0.1);
+            border-left: 3px solid var(--accent-blue);
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .info-box strong { color: var(--accent-blue); }
+
         .p-fill {
             height: 100%;
             background: var(--accent-green);
@@ -371,26 +410,33 @@ export class NanoPanel {
 <body>
     <div id="app">
         <div class="main-container">
+            <div id="header">
             <div class="title-group">
-                <h1>ANTIGRAVITY COCKPIT NANO MONITOR</h1>
+                <h1>ANTIGRAVITY COCKPIT NANO</h1>
             </div>
-
-            <div class="user-info" id="user-info-container">
-                <span class="label">Logged in as:</span>
-                <span id="email-text">Loading user profile...</span>
+            
+            <div class="header-meta-row">
+                <div class="user-info" id="user-info-container">
+                    <span class="label">Logged in as:</span>
+                    <span id="email-text">Loading profile...</span>
+                </div>
+                <div class="version-tag">Version v${this.version}</div>
             </div>
-
+            
             <div class="refresh-row">
-                <button id="refresh-btn" class="refresh-btn" title="Refresh Quota">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 4v6h-6"></path>
-                        <path d="M1 20v-6h6"></path>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
+                <button id="refresh-btn" class="refresh-btn">
+                    <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                     <span>REFRESH</span>
-                    <span class="refresh-label"></span>
                 </button>
                 <div class="refresh-hint">Update latest quota from API</div>
+            </div>
+
+            <div class="info-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div>
+                    <strong>Tip:</strong> Click the star ⭐ icon to pin a model. 
+                    Maximum of 3 models can be pinned.
+                </div>
             </div>
         </div>
 
@@ -483,6 +529,17 @@ export class NanoPanel {
             }
         });
 
+        // Event delegation for pin clicks - much more reliable than inline onclick
+        document.addEventListener('click', e => {
+            const pinBtn = e.target.closest('.pin-btn');
+            if (pinBtn) {
+                const modelId = pinBtn.dataset.modelId;
+                console.log('Pin toggled for model:', modelId);
+                pinBtn.classList.toggle('active');
+                vscode.postMessage({ command: 'pinModel', modelId: modelId });
+            }
+        });
+
         function render() {
             try {
                 _render();
@@ -514,12 +571,11 @@ export class NanoPanel {
             if (currentSnapshot.models && currentSnapshot.models.length > 0) {
                 container.innerHTML = currentSnapshot.models.map(m => {
                     const pct = m.remainingPercentage || 0;
-                    let color = '';
-                    let status = 'HEALTHY';
-                    let bClass = 'badge-healthy';
-
+                    let color = '', status = '', bClass = '';
+                    
                     if (pct < 15) { color = 'danger'; status = 'CRITICAL'; bClass = 'badge-danger'; }
                     else if (pct < 40) { color = 'warning'; status = 'WARNING'; bClass = 'badge-warning'; }
+                    else { color = ''; status = 'HEALTHY'; bClass = 'badge-healthy'; }
 
                     const resetIn = m.timeUntilResetFormatted || 'N/A';
                     const resetAt = m.resetTimeDisplay ? 'at ' + m.resetTimeDisplay : '';
@@ -530,6 +586,11 @@ export class NanoPanel {
                     const pinClass = isPinned ? 'pin-btn active' : 'pin-btn';
                     const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" pointer-events="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
 
+                    const rightHtml = '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
+                                        '<button class="' + pinClass + '" title="Pin to Status Bar" data-model-id="' + m.modelId + '">' + starIcon + '</button>' +
+                                        '<div class="pct">' + pct.toFixed(2) + '%</div>' +
+                                      '</div>';
+
                     return '<div class="card">' +
                             '<div class="card-top">' +
                                 '<div class="model-meta">' +
@@ -539,16 +600,12 @@ export class NanoPanel {
                                         '<span class="badge ' + bClass + '">' + status + '</span>' +
                                     '</div>' +
                                 '</div>' +
-                                    const pinJs = "this.classList.toggle('active'); vscode.postMessage({command: 'pinModel', modelId: '" + m.modelId + "'})";
-                                    return '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
-                                        '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="' + pinJs + '">' + starIcon + '</button>' +
-                                        '<div class="pct">' + pct.toFixed(2) + '%</div>' +
-                                    '</div>';
+                                rightHtml +
                             '</div>' +
                             '<div>' +
                                 '<div class="p-bg">' +
                                     '<div class="p-fill ' + color + '" style="width: ' + pct + '%"></div>' +
-                                '</div>' +
+                                 '</div>' +
                                 '<div class="reset-row">' +
                                     '<span>Reset in <span class="r-val">' + resetIn + '</span></span>' +
                                     '<span>' + resetAt + '</span>' +

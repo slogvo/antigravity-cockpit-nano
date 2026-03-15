@@ -3,6 +3,8 @@
  * Unified management of configuration reading and updates
  */
 
+import * as path from 'path';
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS, DISPLAY_MODE, QUOTA_SOURCE } from './constants';
 import { logger } from './log_service';
@@ -31,25 +33,11 @@ export interface CockpitConfig {
     groupingCustomNames: Record<string, string>;
     /** Show Group in Status Bar */
     groupingShowInStatusBar: boolean;
-    /** List of pinned groups */
     pinnedGroups: string[];
-    /** Group sort order */
     groupOrder: string[];
-    /** Group mappings (modelId -> groupId) */
+    groupCustomNames: Record<string, string>;
     groupMappings: Record<string, string>;
-    /** Warning Threshold (%) */
-    warningThreshold: number;
-    /** Critical Threshold (%) */
-    criticalThreshold: number;
-    /** Display Mode */
-    displayMode: string;
-    /** Hide Plan Details Panel */
-    profileHidden: boolean;
-    /** View Mode (card | list) */
-    viewMode: string;
-    /** Mask Sensitive Data */
     dataMasked: boolean;
-    /** Quota Source */
     quotaSource: 'local' | 'authorized';
 }
 
@@ -57,24 +45,49 @@ export interface CockpitConfig {
 class ConfigService {
     private readonly configSection = 'agCockpit';
     private configChangeListeners: Array<(config: CockpitConfig) => void> = [];
+    private cachedConfig: CockpitConfig | undefined;
+    private version: string = '1.0.0';
 
     constructor() {
         // Listen for configuration changes
-        vscode.workspace.onDidChangeConfiguration((e) => {
+        vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration(this.configSection)) {
+                logger.info('Configuration changed, clearing cache.');
+                this.cachedConfig = undefined; // Chỉ xóa cache khi có sự kiện thực sự từ VS Code
                 const newConfig = this.getConfig();
                 this.configChangeListeners.forEach(listener => listener(newConfig));
             }
         });
+
+        // Load version from package.json
+        try {
+            const extensionPath = vscode.extensions.getExtension('antigravity-cockpit-nano.antigravity-cockpit-nano')?.extensionPath;
+            if (extensionPath) {
+                const packageJsonPath = path.join(extensionPath, 'package.json');
+                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                this.version = packageJson.version;
+            }
+        } catch (err) {
+            logger.error('Failed to load version from package.json', err);
+        }
+    }
+
+    public getVersion(): string {
+        return this.version;
     }
 
     /**
      * Get complete configuration
      */
-    getConfig(): CockpitConfig {
+    public getConfig(): CockpitConfig {
+        // Return cached version if available to ensure speed and avoid race conditions
+        if (this.cachedConfig) {
+            return this.cachedConfig;
+        }
+
         const config = vscode.workspace.getConfiguration(this.configSection);
         
-        return {
+        this.cachedConfig = {
             refreshInterval: config.get<number>(CONFIG_KEYS.REFRESH_INTERVAL, TIMING.DEFAULT_REFRESH_INTERVAL_MS / 1000),
             showPromptCredits: config.get<boolean>(CONFIG_KEYS.SHOW_PROMPT_CREDITS, false),
             pinnedModels: config.get<string[]>(CONFIG_KEYS.PINNED_MODELS, []),
@@ -88,15 +101,13 @@ class ConfigService {
             groupingShowInStatusBar: config.get<boolean>(CONFIG_KEYS.GROUPING_SHOW_IN_STATUS_BAR, false),
             pinnedGroups: config.get<string[]>(CONFIG_KEYS.PINNED_GROUPS, []),
             groupOrder: config.get<string[]>(CONFIG_KEYS.GROUP_ORDER, []),
+            groupCustomNames: config.get<Record<string, string>>(CONFIG_KEYS.GROUPING_CUSTOM_NAMES, {}), // Fixed key
             groupMappings: config.get<Record<string, string>>(CONFIG_KEYS.GROUP_MAPPINGS, {}),
-            warningThreshold: config.get<number>(CONFIG_KEYS.WARNING_THRESHOLD, QUOTA_THRESHOLDS.WARNING_DEFAULT),
-            criticalThreshold: config.get<number>(CONFIG_KEYS.CRITICAL_THRESHOLD, QUOTA_THRESHOLDS.CRITICAL_DEFAULT),
-            displayMode: config.get<string>(CONFIG_KEYS.DISPLAY_MODE, DISPLAY_MODE.WEBVIEW),
-            profileHidden: config.get<boolean>(CONFIG_KEYS.PROFILE_HIDDEN, false),
-            viewMode: config.get<string>(CONFIG_KEYS.VIEW_MODE, 'card'),
             dataMasked: config.get<boolean>(CONFIG_KEYS.DATA_MASKED, false),
             quotaSource: config.get<'local' | 'authorized'>(CONFIG_KEYS.QUOTA_SOURCE, QUOTA_SOURCE.LOCAL),
         };
+
+        return this.cachedConfig;
     }
 
     /**
@@ -109,39 +120,53 @@ class ConfigService {
     /**
      * Update configuration item
      */
-    async updateConfig<K extends keyof CockpitConfig>(
+    private async updateConfig<K extends keyof CockpitConfig>(
         key: K, 
         value: CockpitConfig[K], 
         target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global,
     ): Promise<void> {
+        // Update the cache immediately
+        const current = this.getConfig();
+        const nextConfig = { ...current, [key]: value };
+        this.cachedConfig = nextConfig;
+        
+        // Notify listeners immediately so the UI reflects the change (star glows instantly)
+        this.configChangeListeners.forEach(listener => listener(nextConfig));
+
         logger.info(`Updating config '${this.configSection}.${key}':`, JSON.stringify(value));
         const config = vscode.workspace.getConfiguration(this.configSection);
+        
+        // We DON'T clear the cache here anymore. 
+        // We wait for VS Code's onDidChangeConfiguration event to clear it, 
+        // which ensures we don't reload the old value due to disk IO lag.
         await config.update(key, value, target);
     }
 
     /**
      * Toggle pinned model
      */
-    async togglePinnedModel(modelId: string): Promise<string[]> {
+    public async togglePinnedModel(modelId: string): Promise<void> {
         logger.info(`Toggling pin state for model: ${modelId}`);
-        const config = this.getConfig();
-        const pinnedModels = [...config.pinnedModels];
+        const currentPins = this.getConfig().pinnedModels;
+        const index = currentPins.indexOf(modelId);
 
-        const existingIndex = pinnedModels.findIndex(
-            p => p.toLowerCase() === modelId.toLowerCase(),
-        );
-
-        if (existingIndex > -1) {
-            logger.info(`Model ${modelId} found at index ${existingIndex}, removing.`);
-            pinnedModels.splice(existingIndex, 1);
+        if (index === -1) {
+            // Check limit: Max 3 models
+            if (currentPins.length >= 3) {
+                vscode.window.showWarningMessage(
+                    `Maximum of 3 models can be pinned.`,
+                );
+                return;
+            }
+            logger.info(`Model ${modelId} not found in pins, adding.`);
+            const newPins = [...currentPins, modelId];
+            await this.updateConfig('pinnedModels', newPins);
         } else {
-            logger.info(`Model ${modelId} not found, adding.`);
-            pinnedModels.push(modelId);
+            logger.info(`Model ${modelId} found in pins at index ${index}, removing.`);
+            const newPins = [...currentPins];
+            newPins.splice(index, 1);
+            await this.updateConfig('pinnedModels', newPins);
         }
-
-        logger.info(`New pinned models: ${JSON.stringify(pinnedModels)}`);
-        await this.updateConfig('pinnedModels', pinnedModels);
-        return pinnedModels;
     }
 
     /**

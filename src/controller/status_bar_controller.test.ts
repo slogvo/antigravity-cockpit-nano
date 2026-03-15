@@ -16,7 +16,7 @@ describe('StatusBarController', () => {
             text: '',
             tooltip: '',
             command: '',
-            backgroundColor: undefined
+            backgroundColor: undefined,
         };
         (vscode.window.createStatusBarItem as jest.Mock).mockReturnValue(mockStatusBarItem);
         
@@ -24,9 +24,9 @@ describe('StatusBarController', () => {
             subscriptions: [],
             extension: {
                 packageJSON: {
-                    version: '1.2.3'
-                }
-            }
+                    version: '1.2.3',
+                },
+            },
         } as any;
         
         controller = new StatusBarController(context);
@@ -36,18 +36,18 @@ describe('StatusBarController', () => {
         const snapshot = {
             models: [
                 { modelId: 'model-1', label: 'Model 1', remainingPercentage: 10 },
-                { modelId: 'model-2', label: 'Model 2', remainingPercentage: 100 }
+                { modelId: 'model-2', label: 'Model 2', remainingPercentage: 100 },
             ],
             userInfo: { email: 'test@example.com', name: 'Test' },
             timestamp: Date.now(),
-            isConnected: true
+            isConnected: true,
         } as any;
         
         const config = {
             statusBarFormat: STATUS_BAR_FORMAT.STANDARD,
             pinnedModels: ['model-2'], // Pins the healthier model
             modelOrder: [],
-            modelCustomNames: {}
+            modelCustomNames: {},
         } as any;
 
         controller.update(snapshot, config);
@@ -61,18 +61,18 @@ describe('StatusBarController', () => {
         const snapshot = {
             models: [
                 { modelId: 'model-x', label: 'Model X', remainingPercentage: 5 },
-                { modelId: 'model-y', label: 'Model Y', remainingPercentage: 80 }
+                { modelId: 'model-y', label: 'Model Y', remainingPercentage: 80 },
             ],
             userInfo: { email: 'test@example.com', name: 'Test' },
             timestamp: Date.now(),
-            isConnected: true
+            isConnected: true,
         } as any;
         
         const config = {
             statusBarFormat: STATUS_BAR_FORMAT.STANDARD,
             pinnedModels: [],
             modelOrder: [],
-            modelCustomNames: {}
+            modelCustomNames: {},
         } as any;
 
         controller.update(snapshot, config);
@@ -85,18 +85,18 @@ describe('StatusBarController', () => {
     it('should respect custom names in status bar', () => {
         const snapshot = {
             models: [
-                { modelId: 'model-1', label: 'Original Name', remainingPercentage: 50 }
+                { modelId: 'model-1', label: 'Original Name', remainingPercentage: 50 },
             ],
             userInfo: { email: 'test@example.com', name: 'Test' },
             timestamp: Date.now(),
-            isConnected: true
+            isConnected: true,
         } as any;
         
         const config = {
             statusBarFormat: STATUS_BAR_FORMAT.STANDARD,
             pinnedModels: ['model-1'],
             modelOrder: [],
-            modelCustomNames: { 'model-1': 'Friendly Name' }
+            modelCustomNames: { 'model-1': 'Friendly Name' },
         } as any;
 
         controller.update(snapshot, config);
