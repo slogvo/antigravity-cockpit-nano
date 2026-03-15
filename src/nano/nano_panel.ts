@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { QuotaSnapshot } from '../shared/types';
 import { logger } from '../shared/log_service';
-import { configService } from '../shared/config_service';
 
 /**
  * NanoPanel - A lightweight Webview Panel
@@ -14,7 +13,6 @@ export class NanoPanel {
     private readonly extensionUri: vscode.Uri;
     private readonly version: string;
     private _disposables: vscode.Disposable[] = [];
-    private _lastSnapshot: QuotaSnapshot | undefined;
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, version: string) {
         this.panel = panel;
@@ -32,10 +30,8 @@ export class NanoPanel {
             message => {
                 switch (message.command) {
                     case 'ready':
-                        logger.info('[NanoPanel] Webview ready signal received');
-                        if (this._lastSnapshot) {
-                            this.update(this._lastSnapshot);
-                        }
+                        logger.info('[NanoPanel] Webview ready, triggering initial refresh');
+                        vscode.commands.executeCommand('antigravity.refreshNano');
                         return;
                     case 'refresh':
                         vscode.commands.executeCommand('antigravity.refreshNano');
@@ -45,9 +41,6 @@ export class NanoPanel {
                         return;
                     case 'recordUsage':
                         vscode.commands.executeCommand('antigravity.recordUsage', message.modelId);
-                        return;
-                    case 'pinModel':
-                        configService.togglePinnedModel(message.modelId);
                         return;
                 }
             },
@@ -81,11 +74,9 @@ export class NanoPanel {
     }
 
     public update(snapshot: QuotaSnapshot) {
-        this._lastSnapshot = snapshot;
         this.panel.webview.postMessage({
             type: 'update',
             data: snapshot,
-            pinnedModels: configService.getConfig().pinnedModels
         });
     }
 
@@ -319,23 +310,6 @@ export class NanoPanel {
             font-variant-numeric: tabular-nums;
         }
 
-        .pin-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 4px;
-            opacity: 0.5;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .pin-btn:hover { opacity: 1; color: var(--text-primary); }
-        .pin-btn.active { opacity: 1; color: var(--accent-yellow); }
-        .pin-btn svg { fill: transparent; transition: fill 0.2s; }
-        .pin-btn.active svg { fill: currentColor; }
-
         .p-bg {
             height: 6px;
             background: rgba(255,255,255,0.05);
@@ -406,7 +380,6 @@ export class NanoPanel {
     <script nonce="${cspNonce}">
         const vscode = acquireVsCodeApi();
         let currentSnapshot = null;
-        let pinnedModels = [];
 
         // Signal ready to extension to receive initial data
         vscode.postMessage({ command: 'ready' });
@@ -480,7 +453,6 @@ export class NanoPanel {
             console.log('Nano Webview Received Message:', message.type);
             if (message.type === 'update') {
                 currentSnapshot = message.data;
-                pinnedModels = message.pinnedModels || [];
                 render();
                 // Stop spinning when we get an update
                 refreshBtn.classList.remove('loading');
@@ -508,9 +480,9 @@ export class NanoPanel {
             
             const emailContainer = document.getElementById('user-info-container');
             if (currentSnapshot.userInfo && currentSnapshot.userInfo.email) {
-                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: \'login\'})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
+                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: &quot;login&quot;})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
             } else {
-                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: \'login\'})">SIGN IN TO ANTI CLOUD</button>';
+                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: &quot;login&quot;})">SIGN IN TO ANTI CLOUD</button>';
             }
 
             const container = document.getElementById('model-container');
@@ -529,10 +501,6 @@ export class NanoPanel {
                     const src = getIconSrc(m.label);
                     const iconHtml = src ? '<img src="' + src + '" alt="logo" />' : '';
 
-                    const isPinned = pinnedModels.includes(m.modelId) || pinnedModels.includes(m.label);
-                    const pinClass = isPinned ? 'pin-btn active' : 'pin-btn';
-                    const starIcon = '<svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" pointer-events="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
-
                     return '<div class="card">' +
                             '<div class="card-top">' +
                                 '<div class="model-meta">' +
@@ -542,10 +510,7 @@ export class NanoPanel {
                                         '<span class="badge ' + bClass + '">' + status + '</span>' +
                                     '</div>' +
                                 '</div>' +
-                                '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
-                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: \'pinModel\', modelId: \'' + escapeHtml(m.modelId) + '\'})">' + starIcon + '</button>' +
-                                    '<div class="pct">' + pct.toFixed(2) + '%</div>' +
-                                '</div>' +
+                                '<div class="pct">' + pct.toFixed(2) + '%</div>' +
                             '</div>' +
                             '<div>' +
                                 '<div class="p-bg">' +
