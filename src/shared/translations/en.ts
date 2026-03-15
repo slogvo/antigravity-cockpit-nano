@@ -12,6 +12,7 @@ export const en = {
     'statusBar.lowest': 'Lowest',
     'statusBar.credits': 'Credits',
     'statusBar.tooltip': 'Click to open Quota Monitor',
+    'common.unknown': 'Unknown',
 
     // Dashboard
     'dashboard.title': 'ANTIGRAVITY COCKPIT NANO MONITOR',

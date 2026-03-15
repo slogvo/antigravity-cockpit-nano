@@ -12,6 +12,7 @@ export const vi = {
     'statusBar.lowest': 'Thấp nhất',
     'statusBar.credits': 'Credits',
     'statusBar.tooltip': 'Nhấn để mở Quota Monitor',
+    'common.unknown': 'Không rõ',
 
     // Dashboard
     'dashboard.title': 'ANTIGRAVITY COCKPIT NANO MONITOR',
