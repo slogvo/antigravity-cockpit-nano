@@ -82,7 +82,7 @@ export class NanoPanel {
         this.panel.webview.postMessage({
             type: 'update',
             data: snapshot,
-            pinnedModels: configService.getConfig().pinnedModels
+            pinnedModels: configService.getConfig().pinnedModels,
         });
     }
 
@@ -503,10 +503,11 @@ export class NanoPanel {
             console.log('Nano Webview Rendering for email:', currentSnapshot.userInfo?.email || 'N/A');
             
             const emailContainer = document.getElementById('user-info-container');
+            const loginJs = "vscode.postMessage({command: 'login'})";
             if (currentSnapshot.userInfo && currentSnapshot.userInfo.email) {
-                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="vscode.postMessage({command: \'login\'})">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
+                emailContainer.innerHTML = '<span class="label">Logged in as:</span> <span id="email-text" style="cursor: pointer; color: var(--accent-green);" onclick="' + loginJs + '">' + escapeHtml(currentSnapshot.userInfo.email) + '</span>';
             } else {
-                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="vscode.postMessage({command: \'login\'})">SIGN IN TO ANTI CLOUD</button>';
+                emailContainer.innerHTML = '<button class="refresh-btn" style="background: var(--accent-pink); color: white; border: none; padding: 8px 24px; font-size: 12px;" onclick="' + loginJs + '">SIGN IN TO ANTI CLOUD</button>';
             }
 
             const container = document.getElementById('model-container');
@@ -538,10 +539,11 @@ export class NanoPanel {
                                         '<span class="badge ' + bClass + '">' + status + '</span>' +
                                     '</div>' +
                                 '</div>' +
-                                '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
-                                    '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="this.classList.toggle(\'active\'); vscode.postMessage({command: \'pinModel\', modelId: \'' + escapeHtml(m.modelId) + '\'})">' + starIcon + '</button>' +
-                                    '<div class="pct">' + pct.toFixed(2) + '%</div>' +
-                                '</div>' +
+                                    const pinJs = "this.classList.toggle('active'); vscode.postMessage({command: 'pinModel', modelId: '" + m.modelId + "'})";
+                                    return '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">' +
+                                        '<button class="' + pinClass + '" title="Pin to Status Bar" onclick="' + pinJs + '">' + starIcon + '</button>' +
+                                        '<div class="pct">' + pct.toFixed(2) + '%</div>' +
+                                    '</div>';
                             '</div>' +
                             '<div>' +
                                 '<div class="p-bg">' +

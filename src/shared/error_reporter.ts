@@ -176,7 +176,7 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
     const likelyUserEnvIssue = [
         'network_timeout', 'connection_refused', 'dns_failure', 
         'proxy_error', 'permission_denied', 'cmd_timeout', 'process_not_found',
-        'unauthorized'
+        'unauthorized',
     ].includes(errorCategory);
     
     return {
@@ -443,7 +443,7 @@ function getRuntimeContext(): {
     process_cmd_timeout_ms: number;
     process_scan_retry_ms: number;
     max_consecutive_retry: number;
-} {
+    } {
     return {
         http_timeout_ms: TIMING.HTTP_TIMEOUT_MS,
         process_cmd_timeout_ms: TIMING.PROCESS_CMD_TIMEOUT_MS,

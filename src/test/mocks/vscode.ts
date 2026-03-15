@@ -18,6 +18,17 @@ export const workspace = {
     onDidChangeConfiguration: jest.fn(),
 };
 
+export const env = {
+    language: 'en',
+};
+
+export const MarkdownString = jest.fn(() => ({
+    appendMarkdown: jest.fn(),
+    appendText: jest.fn(),
+    isTrusted: false,
+    supportHtml: false,
+}));
+
 export const commands = {
     registerCommand: jest.fn(),
 };
@@ -38,6 +49,12 @@ export const StatusBarAlignment = {
     Right: 2,
 };
 
+export const ConfigurationTarget = {
+    Global: 1,
+    Workspace: 2,
+    WorkspaceFolder: 3,
+};
+
 export enum ExtensionMode {
     Production = 1,
     Development = 2,
@@ -48,8 +65,11 @@ export default {
     window,
     workspace,
     commands,
+    env,
+    MarkdownString,
     Uri,
     EventEmitter,
     StatusBarAlignment,
+    ConfigurationTarget,
     ExtensionMode,
 };
